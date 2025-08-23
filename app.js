@@ -22,7 +22,7 @@ import { sendEmail } from "./utils/mailService.js";
 import { emailUnsuspendUser } from "./constants/email_message.js";
 import dotenv from "dotenv";
 import session from "express-session";
-import passport from "./config/passport.js"; 
+import passport from "./config/passport.js";
 
 dotenv.config();
 
@@ -54,7 +54,7 @@ app.use(
   })
 );
 
-// Session middleware 
+// Session middleware
 app.use(
   session({
     secret: process.env.SESSION_SECRET || "your_secret_key",

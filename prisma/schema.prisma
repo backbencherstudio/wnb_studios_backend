@@ -521,3 +521,6 @@ model HelpSupport {
 
   @@map("help_and_support")
 }
+
+
+
