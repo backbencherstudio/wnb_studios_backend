@@ -83,9 +83,18 @@ model User {
 
   EmailHistoryRecipient EmailHistoryRecipient[]
 
-  Rating      Rating[]
-  Favourite   Favourite[]
-  HelpSupport HelpSupport[]
+  rating           Rating[]
+  favourite        Favourite[]
+  helpSupport      HelpSupport[]
+  clubPosts        ClubPost[]
+  postLikes        PostLike[]
+  postComments     PostComment[]
+  postCommentLikes PostCommentLike[]
+  postShares       PostShare[]
+  clubPoll         ClubPoll[]
+  reporterPosts    ReportPost[]      @relation("Reporter")
+  clubs            Club[]
+  pollVotes        PollVote[]
 
   @@map("users")
 }
@@ -518,4 +527,250 @@ model HelpSupport {
   status HelpSupportStatus @default(Open)
 
   @@map("help_and_support")
+}
+
+//
+// ---------------------------------- Club Models --------------------------//
+//
+
+//---------------------------------- Enums -------------------------------//
+
+enum MediaType {
+  PHOTO
+  VIDEO
+}
+
+enum PostVisibility {
+  PUBLIC
+  PRIVATE
+  FRIENDS
+}
+
+enum ReportStatus {
+  OPEN
+  CLOSED
+}
+
+enum PostStatus {
+  APPROVED
+  REQUEST
+  REJECTED
+  FLAGGED
+  ANNOUNCEMENT
+}
+
+//---------------------------------- Club --------------------------------//
+
+model Club {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  name        String
+  description String?
+  avatar      String?
+  coverPhoto  String?
+
+  visibility   PostVisibility @default(PUBLIC)
+  membersCount Int            @default(0)
+
+  ownerId String
+  owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  posts ClubPost[]
+
+  @@index([ownerId])
+}
+
+//---------------------------------- Club Posts ---------------------------//
+
+model ClubPost {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  status PostStatus @default(APPROVED)
+
+  content    String
+  mediaUrl   String?
+  mediaType  MediaType?
+  visibility PostVisibility @default(PUBLIC)
+
+  // Author
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  // Club
+  clubId String?
+  club   Club?   @relation(fields: [clubId], references: [id])
+
+  comments    PostComment[]
+  likes       PostLike[]
+  poll        ClubPoll?
+  shares      PostShare[]
+  reportPosts ReportPost[]
+
+  @@index([authorId])
+  @@index([clubId])
+  @@map("club_posts")
+}
+
+//---------------------------------- Likes --------------------------------//
+
+model PostLike {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  avatar   String?
+  name     String?
+  username String?
+
+  postId String
+  post   ClubPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+  @@index([postId])
+  @@index([userId])
+}
+
+//---------------------------------- Comments ------------------------------//
+
+model PostComment {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  name     String?
+  username String?
+  avatar   String?
+  content  String
+
+  parentId String?
+  parent   PostComment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies  PostComment[] @relation("CommentReplies")
+
+  postId String
+  post   ClubPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  likes PostCommentLike[]
+
+  @@index([postId])
+  @@index([userId])
+  @@index([parentId])
+}
+
+//---------------------------------- Comment Likes -------------------------//
+
+model PostCommentLike {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  name     String?
+  username String?
+  avatar   String?
+
+  commentId String
+  comment   PostComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, commentId])
+  @@index([commentId])
+  @@index([userId])
+}
+
+//---------------------------------- Shares --------------------------------//
+
+model PostShare {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  avatar   String?
+  name     String?
+  username String?
+
+  postId String
+  post   ClubPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+  @@index([postId])
+  @@index([userId])
+}
+
+//---------------------------------- Poll (was Pool) -----------------------//
+
+model ClubPoll {
+  id String @id @default(cuid())
+
+  question String
+  options  Json
+
+  avatar   String?
+  name     String?
+  username String?
+
+  postId String   @unique
+  post   ClubPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  votes  PollVote[]
+  userId String?
+  user   User?      @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+//---------------------------------- Poll Votes ----------------------------//
+
+model PollVote {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  option   String
+  avatar   String?
+  name     String?
+  username String?
+
+  pollId String
+  poll   ClubPoll @relation(fields: [pollId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, pollId])
+  @@index([pollId])
+  @@index([userId])
+}
+
+//---------------------------------- Report Posts --------------------------//
+
+model ReportPost {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  reason      String
+  description String?
+
+  status ReportStatus @default(OPEN)
+
+  postId String
+  post   ClubPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  reporterId String
+  reporter   User   @relation("Reporter", fields: [reporterId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@index([reporterId])
 }
