@@ -7,13 +7,24 @@ import userRoutes from "./modules/user/user.route.js";
 import nodeCron from "node-cron";
 import { PrismaClient } from "@prisma/client";
 import uploadsRoutes from "./modules/admin/video_routes/uploads.route.js";
-import contentsRoutes from "./modules/admin/video_routes/contenets.route.js";
 import pay from "./modules/paymnet/stripe.route.js";
 import createRoutes from "./modules/admin/create-category/create_category.route.js";
 import usermanagementRoutes from "./modules/admin/users/users.route.js";
+import ratingRoutes from "./modules/rating/rating.route.js";
+import contentsRoute from "./modules/admin/video_routes/contenets.route.js";
+import favouriteRoutes from "./modules/Favourite/favourite.route.js";
+import adminSettingsRoutes from "./modules/admin/settings/admin_settigns.route.js";
+import supportRoutes from "./modules/helpSupport/support.route.js";
 //Import Swagger spec and UI
 import { swaggerSpec } from "./swagger/index.js";
 import swaggerUi from "swagger-ui-express";
+import { sendEmail } from "./utils/mailService.js";
+import { emailUnsuspendUser } from "./constants/email_message.js";
+import dotenv from "dotenv";
+import session from "express-session";
+import passport from "./config/passport.js";
+
+dotenv.config();
 
 const app = express();
 const prisma = new PrismaClient();
@@ -43,7 +54,20 @@ app.use(
   })
 );
 
-//Cron job
+// Session middleware
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET || "your_secret_key",
+    resave: false,
+    saveUninitialized: false,
+    cookie: { secure: process.env.NODE_ENV === "production" },
+  })
+);
+
+app.use(passport.initialize());
+app.use(passport.session());
+
+//--------------Cron job for subscription cleanup-------------------
 let counter = 0;
 nodeCron.schedule("0 0 * * *", async () => {
   try {
@@ -93,7 +117,96 @@ nodeCron.schedule("0 0 * * *", async () => {
   }
 });
 
-//JSON parser + Webhook exception
+//-----------------Cron job for unsuspend users----------------------
+nodeCron.schedule("0 0 * * *", async () => {
+  console.log("Cron job triggered at:", new Date().toISOString());
+  try {
+    const now = new Date();
+    console.log(
+      `Checking for suspended users to unsuspend at: ${now.toISOString()}`
+    );
+
+    const usersToUpdate = await prisma.user.findMany({
+      where: {
+        status: "suspended",
+        suspend_endTime: {
+          lte: now,
+        },
+      },
+    });
+
+    if (usersToUpdate.length > 0) {
+      console.log(`Found ${usersToUpdate.length} users to unsuspend.`);
+
+      await prisma.user.updateMany({
+        where: { id: { in: usersToUpdate.map((user) => user.id) } },
+        data: { status: "active", suspend_endTime: null },
+      });
+
+      for (const user of usersToUpdate) {
+        const emailContent = emailUnsuspendUser(user.email);
+        await sendEmail(
+          user.email,
+          "Your Account Has Been Reactivated",
+          emailContent
+        );
+        console.log(`Email sent to ${user.email}`);
+      }
+
+      console.log(`Unsuspended and notified ${usersToUpdate.length} users.`);
+    } else {
+      console.log("No users to unsuspend today.");
+    }
+  } catch (error) {
+    console.error("Error in cron job:", error);
+  }
+});
+
+//-------------------Cron job for user reactivation-------------------
+nodeCron.schedule("0 0 * * *", async () => {
+  try {
+    const now = new Date();
+    console.log(`Cron job running at: ${now.toISOString()}`);
+
+    const usersToUpdate = await prisma.user.findMany({
+      where: {
+        status: "deactivated",
+        deactivation_end_date: {
+          lte: now,
+        },
+      },
+    });
+
+    if (usersToUpdate.length > 0) {
+      await prisma.user.updateMany({
+        where: { id: { in: usersToUpdate.map((user) => user.id) } },
+        data: {
+          status: "active",
+          deactivation_start_date: null,
+          deactivation_end_date: null,
+        },
+      });
+
+      for (const user of usersToUpdate) {
+        const emailContent = emailReactivateUser(user.email);
+        await sendEmail(
+          user.email,
+          "Your Account Has Been Reactivated",
+          emailContent
+        );
+        console.log(`Email sent to ${user.email}`);
+      }
+
+      console.log(`Reactivated and notified ${usersToUpdate.length} users.`);
+    } else {
+      console.log("No users to reactivate.");
+    }
+  } catch (error) {
+    console.error("Error in reactivation cron job:", error);
+  }
+});
+
+//-------------------JSON parser + Webhook exception-------------------
 app.use((req, res, next) => {
   if (req.originalUrl === "/api/payments/webhook") {
     express.raw({ type: "application/json" })(req, res, next);
@@ -108,10 +221,15 @@ app.use(morgan("dev"));
 //Use routes
 app.use("/api/users", userRoutes);
 app.use("/api/uploads", uploadsRoutes);
-app.use("/api/contents", contentsRoutes);
+app.use("/api/contents", contentsRoute);
 app.use("/api/payments", pay);
 app.use("/api/admin/categories", createRoutes);
 app.use("/api/admin/user", usermanagementRoutes);
+app.use("/api/admin/settings", adminSettingsRoutes);
+app.use("/api/ratings", ratingRoutes);
+app.use("/api/favourites", favouriteRoutes);
+app.use("/api/support", supportRoutes);
+
 //Resolve __dirname for ESM
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

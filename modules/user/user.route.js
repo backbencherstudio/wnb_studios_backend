@@ -10,12 +10,16 @@ import {
   changePassword,
   sendMailToAdmin,
   getMe,
-  googleLogin,
+  googleLogin, 
+  googleCallback,
+  authenticateUser,
+  updatePassword
 } from "./user.controller.js";
 import { upload } from "../../config/Multer.config.js";
 import { verifyUser } from "../../middlewares/verifyUsers.js";
 
 const router = express.Router();
+
 // Test route
 router.get("/test", (req, res) => {
   res.send("User route connected");
@@ -31,30 +35,53 @@ router.post("/upload", upload.single("file"), (req, res) => {
     .send({ message: "File uploaded successfully", file: req.file });
 });
 
-//Register a user
+// Register a user
 router.post("/registerUser", registerUser);
-//log in a user
+
+// Log in a user
 router.post("/login", loginUser);
 
-// Google login
-router.patch("/google-login", googleLogin);
+// Google login route (redirect to Google)
+router.get("/auth/google", googleLogin);
 
-//forget pass
+// Google callback route (after successful authentication)
+router.get("/auth/google/callback", googleCallback);
+
+// logout
+router.get("/auth/google/logout", (req, res) => {
+  req.logout((err) => {
+    if (err) {
+      return next(err);
+    }
+    res.redirect("/");
+  });
+});
+
+// Forget password
 router.post("/forget_pass", forgotPasswordOTPsend);
 router.post("/checkForgetPassOtp", verifyForgotPasswordOTP);
 router.post("/resetPass", resetPassword);
-router.post("/change-password", verifyUser("USER"), changePassword);
+router.post("/change-password", verifyUser("normal"), changePassword);
 
-//update user img
-router.put('/update-image', upload.single('profilePicture'), verifyUser("normal"), updateImage);
-router.put('/update-user-details', verifyUser("normal"), updateUserDetails);
+// Update user image
+router.put(
+  "/update-user-details",
+  verifyUser("normal", "premium", "admin"),
+  updateUserDetails
+);
 
+router.put(
+  "/update-image",
+  upload.single("profilePicture"),
+  verifyUser("normal", "premium", "admin"),
+  updateImage
+);
 
+// Support
+router.post("/sende-mail", verifyUser("USER"), sendMailToAdmin);
 
-//support
-router.post('/sende-mail', verifyUser("USER"), sendMailToAdmin)
-
-
-//get me 
-router.get('/get-me', verifyUser("normal"), getMe);
+//get me
+router.get("/get-me",authenticateUser, getMe);
+//update pass
+router.put('/updatePass', authenticateUser ,updatePassword )
 export default router;

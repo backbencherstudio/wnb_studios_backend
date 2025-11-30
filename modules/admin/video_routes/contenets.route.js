@@ -1,70 +1,285 @@
-import express from 'express';
-import { PrismaClient } from '@prisma/client';
-import { verifyUser } from '../../../middlewares/verifyUsers.js';
+import express from "express";
+import { PrismaClient } from "@prisma/client";
+import { verifyUser } from "../../../middlewares/verifyUsers.js"; // Assuming you are using it elsewhere
 const prisma = new PrismaClient();
 const r = express.Router();
 
 const serialize = (data) =>
-  JSON.parse(JSON.stringify(data, (_, v) => (typeof v === 'bigint' ? v.toString() : v)));
+  JSON.parse(
+    JSON.stringify(data, (_, v) => (typeof v === "bigint" ? v.toString() : v))
+  );
 
-r.get('/allContents', async (req, res) => {
+// Helper function to build the S3 URL
+const buildS3Url = (bucket, key) => {
+  if (!bucket || !key) return null;
+  if (process.env.AWS_S3_ENDPOINT) {
+    return `${process.env.AWS_S3_ENDPOINT}/${bucket}/${key}`;
+  }
+  const region = process.env.AWS_REGION || "us-east-1";
+  return `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
+};
+// Helper function to build local file URL
+const buildLocalUrl = (file) => {
+  const PUBLIC_BASE_URL =
+    process.env.PUBLIC_BASE_URL || "http://localhost:4005";
+  return file ? `${PUBLIC_BASE_URL}/uploads/${file}` : null;
+};
+// Route to get all contents
+r.get("/allContents", verifyUser("admin"), async (req, res) => {
   try {
     const rows = await prisma.content.findMany({
-      orderBy: { created_at: 'desc' },
-      include: {
-        category: true,
-      },
+      orderBy: { created_at: "desc" },
       select: {
         id: true,
         title: true,
         genre: true,
-        content_type: true,
-        original_name: true,
-        type: true,
-        file_size_bytes: true,
-        status: true,
-        created_at: true,
-        content_status: true,
         category: {
           select: {
             id: true,
             name: true,
           },
         },
+        type: true,
+        file_size_bytes: true,
+        status: true,
+        category_id: true,
+        content_status: true,
+        created_at: true,
+        view_count: true,
+        s3_bucket: true,
+        s3_key: true,
+        s3_thumb_key: true,
+        video: true,
       },
     });
 
-    // Construct full URLs for video and thumbnails
-    const minioEndpoint = process.env.AWS_S3_ENDPOINT || 'http://localhost:9000'; // Default to MinIO if not set
-    const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL || 'http://localhost:8080'; // Fallback for local storage
+    const serializedRows = rows.map((row) => {
+      const video =
+        buildS3Url(row.s3_bucket, row.s3_key) || buildLocalUrl(row.video);
+      const thumbnailUrl =
+        buildS3Url(row.s3_bucket, row.s3_thumb_key) ||
+        buildLocalUrl(row.thumbnail);
+      const thumbnail = thumbnailUrl ? thumbnailUrl : null;
 
-    const serializedRows = rows.map(row => {
-      const videoUrl = `${minioEndpoint}/${row.s3_bucket}/${row.s3_key}`;
-      const thumbnailUrl = row.s3_thumb_key
-        ? `${minioEndpoint}/${row.s3_bucket}/${row.s3_thumb_key}`
-        : null;
-
+      delete row.s3_bucket;
+      delete row.s3_key;
+      delete row.s3_thumb_key;
+      delete row.video;
       return {
-        ...serialize(row), // Serialize the content as needed
-        videoUrl,
-        thumbnailUrl,
+        ...serialize(row),
+        video,
+        thumbnail,
       };
     });
 
     res.json(serializedRows);
   } catch (error) {
-    console.log('Error fetching contents:', error);
-    res.status(500).json({ error: 'Failed to fetch contents' });
+    console.log("Error fetching contents:", error);
+    res.status(500).json({ error: "Failed to fetch contents" });
   }
 });
 
-r.get('/:id', async (req, res) => {
-  const row = await prisma.content.findUnique({ where: { id: req.params.id } });
-  if (!row) return res.status(404).json({ error: 'not found' });
-  res.json(serialize(row)); 
+r.get("/:id", verifyUser("admin"), async (req, res) => {
+  const { id } = req.params;
+  try {
+    const row = await prisma.content.findUnique({
+      where: { id: id },
+      select: {
+        id: true,
+        title: true,
+        genre: true,
+        category_id: true,
+        type: true,
+        file_size_bytes: true,
+        status: true,
+        content_status: true,
+        created_at: true,
+        view_count: true,
+        s3_bucket: true,
+        s3_key: true,
+        s3_thumb_key: true,
+        video: true,
+      },
+    });
+
+    if (!row) {
+      return res
+        .status(404)
+        .json({ error: "Content not exist or maybe deleted" });
+    }
+
+    const video =
+      buildS3Url(row.s3_bucket, row.s3_key) || buildLocalUrl(row.video);
+    const thumbnailUrl =
+      buildS3Url(row.s3_bucket, row.s3_thumb_key) ||
+      buildLocalUrl(row.thumbnail);
+    const thumbnail = thumbnailUrl ? thumbnailUrl : null;
+
+    delete row.s3_bucket;
+    delete row.s3_key;
+    delete row.s3_thumb_key;
+    delete row.video;
+
+    res.json({
+      ...serialize(row),
+      video,
+      thumbnail,
+    });
+  } catch (error) {
+    console.log("Error fetching content:", error);
+    res.status(500).json({ error: "Failed to fetch content" });
+  }
+});
+
+r.get("/getoneWithcat/:id", async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const contents = await prisma.content.findMany({
+      where: {
+        category_id: id,
+      },
+    });
+
+    if (contents.length === 0) {
+      return res
+        .status(404)
+        .json({ message: `No content found for category ID ${id}` });
+    }
+
+    const formattedContents = contents.map((content) => {
+      const videoUrl =
+        buildS3Url(content.s3_bucket, content.s3_key) ||
+        buildLocalUrl(content.video);
+      const thumbnailUrl =
+        buildS3Url(content.s3_bucket, content.s3_thumb_key) ||
+        buildLocalUrl(content.thumbnail);
+
+      delete content.s3_bucket;
+      delete content.s3_key;
+      delete content.s3_thumb_key;
+      delete content.video;
+      delete content.duration;
+      delete content.storage_provider;
+      delete content.original_name;
+      delete content.checksum_sha256;
+      delete content.content_type;
+
+      return {
+        ...serialize(content),
+        video: videoUrl,
+        thumbnail: thumbnailUrl ? thumbnailUrl : null,
+      };
+    });
+
+    res.json({ contents: formattedContents });
+  } catch (error) {
+    console.error("Error fetching content by category ID:", error);
+    res.status(500).json({ error: "Failed to fetch content by category ID" });
+  }
 });
 
 
+//--------------------getting popular contents by category-------------------
+r.get("/getPopularContents/:categoryId", async (req, res) => {
+  const { categoryId } = req.params;
 
+  try {
+    const ratings = await prisma.rating.findMany({
+      where: {
+        content: {
+          category_id: categoryId,
+        },
+      },
+      select: {
+        content_id: true,
+        rating: true,
+      },
+      orderBy: {
+        rating: "desc",
+      },
+    });
+
+    if (ratings.length === 0) {
+      return res
+        .status(404)
+        .json({ message: `No content found for category ID ${categoryId}` });
+    }
+
+    const contentIds = ratings.map((rating) => rating.content_id);
+
+    const contents = await prisma.content.findMany({
+      where: {
+        id: { in: contentIds }, 
+      },
+    });
+
+    const formattedContents = contents.map((content) => {
+      const rating = ratings.find(
+        (rating) => rating.content_id === content.id
+      ).rating; 
+
+      const videoUrl =
+        buildS3Url(content.s3_bucket, content.s3_key) ||
+        buildLocalUrl(content.video);
+      const thumbnailUrl =
+        buildS3Url(content.s3_bucket, content.s3_thumb_key) ||
+        buildLocalUrl(content.thumbnail);
+
+      delete content.s3_bucket;
+      delete content.s3_key;
+      delete content.s3_thumb_key;
+      delete content.video;
+      delete content.duration;
+      delete content.storage_provider;
+      delete content.original_name;
+      delete content.checksum_sha256;
+      delete content.content_type;
+
+      return {
+        ...serialize(content), 
+        video: videoUrl,
+        thumbnail: thumbnailUrl || null,
+        rating, 
+      };
+    });
+
+    const sortedContents = formattedContents.sort(
+      (a, b) => b.rating - a.rating
+    );
+
+    res.json({ contents: sortedContents });
+  } catch (error) {
+    console.error("Error fetching content by category and rating:", error);
+    res
+      .status(500)
+      .json({ error: "Failed to fetch content by category and rating" });
+  }
+});
+
+
+r.delete("/:id", verifyUser("admin"), async (req, res) => {
+  const { id } = req.params;
+  try {
+    const content = await prisma.content.findUnique({
+      where: { id: id },
+    });
+
+    if (!content) {
+      return res
+        .status(404)
+        .json({ error: "Content not exist or maybe deleted" });
+    }
+
+    await prisma.content.delete({
+      where: { id: id },
+    });
+
+    res.json({ message: "Content deleted successfully" });
+  } catch (error) {
+    console.log("Error deleting content:", error);
+    res.status(500).json({ error: "Failed to delete content" });
+  }
+});
 
 export default r;
