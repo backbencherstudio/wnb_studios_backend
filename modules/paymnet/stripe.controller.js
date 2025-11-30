@@ -1,9 +1,7 @@
-import jwt from 'jsonwebtoken';
 import Stripe from 'stripe';
 import { PrismaClient } from "@prisma/client";
-import cron from 'node-cron';
 
-//need to work here more on this
+
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const prisma = new PrismaClient();
@@ -11,6 +9,7 @@ const prisma = new PrismaClient();
 export const createPaymentIntent = async (req, res) => {
   try {
     const { paymentMethodId, currency, service_id } = req.body;
+
     if (!paymentMethodId || !currency || !service_id) {
       return res.status(400).json({ error: 'Missing payment method, currency, or service ID' });
     }
@@ -26,6 +25,18 @@ export const createPaymentIntent = async (req, res) => {
     const { email, role, userId } = req.user || {};
     console.log('User Info:', { email, role, userId });
 
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID is missing or invalid' });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
     const transaction = await prisma.$transaction(async (prismaTx) => {
       try {
         const paymentIntent = await stripe.paymentIntents.create({
@@ -33,20 +44,20 @@ export const createPaymentIntent = async (req, res) => {
           currency,
           payment_method: paymentMethodId,
           metadata: {
-            user_id: "cmdse9ng90000rexck7fwfwxs",
+            user_id: userId,
             user_email: email,
             user_role: role,
-            service_id : 'cme43ky160000rebkdbrnsr71',
+            service_id: service_id,
             plan: service.plan || 'basic',
           }
         });
 
         const paymentTransaction = await prismaTx.paymentTransaction.create({
           data: {
-            user: { connect: { id: userId } },
+            user_id: userId,
             price: paymentIntent.amount,
             currency: paymentIntent.currency,
-            status: "pending",
+            status: 'pending',
             payment_method: paymentIntent.payment_method,
           },
         });
@@ -70,6 +81,8 @@ export const createPaymentIntent = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
+
+
 //webhook handler
 export const handleWebhook = async (req, res) => {
   const sig = req.headers['stripe-signature'];
@@ -112,16 +125,16 @@ const handlePaymentIntentSucceeded = async (paymentIntent) => {
   console.log(`Processing payment intent for user ${user_id} with service ${service_id} and plan ${plan}`);
   
 
-  // if (!user_id) {
-  //   console.error('User ID not found in payment intent metadata.');
-  //   return;
-  // }
+  if (!user_id) {
+    console.error('User ID not found in payment intent metadata.');
+    return;
+  }
 
   const transaction = await prisma.$transaction(async (prismaTx) => {
     try {
       // 1. Update user 
       const userUpdate = await prismaTx.user.update({
-        where: { id: 'cmdse9ng90000rexck7fwfwxs' },
+        where: { id: paymentIntent.metadata.user_id },
         select: { name: true },
         data: {
           role: "premium",
@@ -133,7 +146,7 @@ const handlePaymentIntentSucceeded = async (paymentIntent) => {
 
 
       const service = await prismaTx.services.findUnique({
-        where: { id: 'cme43ky160000rebkdbrnsr71' },
+        where: { id: paymentIntent.metadata.service_id },
       });
 
       if (!service) {
@@ -156,17 +169,21 @@ const handlePaymentIntentSucceeded = async (paymentIntent) => {
         },
       });
 
-      // console.log(`Subscription created for user ${user_id} with plan ${plan}.`);
+      console.log(`Subscription created for user ${user_id} with plan ${plan}.`);
 
-      // const paymentTransaction = await prismaTx.paymentTransaction.update({
-      //   where: { id: paymentIntent.id },
-      //   data: {
-      //     status: "succeeded",
-      //     subscription: { connect: { id: subscription.id } },
-      //   },
-      // });
+      // 2. Update payment transaction
+      if (!paymentIntent.id) {
+        console.log('Payment Intent ID is missing.');
+      }
+      const paymentTransaction = await prismaTx.paymentTransaction.update({
+        where: { id: paymentIntent.id },
+        data: {
+          status: "succeeded",
+          subscription: { connect: { id: subscription.id } },
+        },
+      });
 
-      // console.log(`Payment transaction updated for user ${user_id}:`, paymentTransaction);
+      console.log(`Payment transaction updated for user ${user_id}:`, paymentTransaction);
 
       return 'Payment Intent Success';
     } catch (error) {
@@ -216,3 +233,137 @@ const calculateSubscriptionEndDate = (startDate, plan) => {
 
   return endDate;
 };
+
+/////////-----------------------subscription-----------------------/////////
+
+export const getAllSubscriptions = async (req, res) => {
+  try {
+    const subscriptions = await prisma.subscription.findMany({
+      orderBy: { created_at: 'desc' },
+      select: {
+        id: true,
+        start_date: true,
+        end_date: true,
+        plan: true,
+        payment_method: true,
+        status: true,
+        transaction_id: true,
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+
+        Services: {
+          select: {
+            plan: true,
+            name: true,
+            price: true,
+          },
+        },
+      },
+    });
+
+    if (subscriptions.length === 0) {
+      return res.status(201).json({ message: 'No subscriptions found' });
+    }
+
+    res.json(subscriptions);
+  } catch (error) {
+    console.error('Error fetching subscriptions:', error);
+    res.status(500).json({ error: 'Failed to fetch subscriptions' });
+  }
+};
+//Total Subscribers
+export const getTotalSubscribers = async (req, res) => {
+  try {
+    const totalSubscribers = await prisma.subscription.findMany({
+      distinct: ['user_id'],
+      select: {
+        user_id: true,
+      },
+    });
+
+    res.json({ totalSubscribers: totalSubscribers.length });
+  } catch (error) {
+    console.error('Error fetching total subscribers:', error);
+    res.status(500).json({ error: 'Failed to fetch total subscribers' });
+  }
+};
+//Total Active Subscriptions
+export const getTotalActiveSubscriptions = async (req, res) => {
+  try {
+    const totalActiveSubscriptions = await prisma.subscription.count({
+      where: { status: 'active' },
+    });
+
+    if (totalActiveSubscriptions === 0) {
+      return res.status(201).json({ message: '0' });
+    }
+    res.json({ totalActiveSubscriptions });
+  } catch (error) {
+    console.error('Error fetching total active subscriptions:', error);
+    res.status(500).json({ error: 'Failed to fetch total active subscriptions' });
+  }
+}
+//Total Monthly Revenue
+export const getTotalMonthlyRevenue = async (req, res) => {
+  try {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const totalRevenue = await prisma.paymentTransaction.aggregate({
+      _sum: {
+        price: true,
+      },
+      where: {
+        status: 'succeeded',
+        created_at: {
+          gte: startOfMonth,
+        },
+      },
+    });
+
+    if (totalRevenue._sum.price === null) {
+      return res.status(201).json({ message: '0' });
+    }
+
+    res.json({ totalMonthlyRevenue: totalRevenue._sum.price || 0 });
+  } catch (error) {
+    console.error('Error fetching total monthly revenue:', error);
+    res.status(500).json({ error: 'Failed to fetch total monthly revenue' });
+  }
+}
+//Get avg subscription value
+export const getAvgSubsctiptionValue = async (req, res) => {
+  try {
+    const totalRevenue = await prisma.paymentTransaction.aggregate({
+      _sum: {
+        price: true,
+      },
+      where: {
+        status: 'succeeded',
+      },
+    });
+
+    const totalSubscriptions = await prisma.subscription.count({
+      where: { status: 'active' },
+    });
+
+    const avgSubscriptionValue = totalSubscriptions > 0
+      ? totalRevenue._sum.price / totalSubscriptions
+      : 0;
+
+      if (avgSubscriptionValue === 0) {
+        return res.status(201).json({ message: 'No active subscriptions found' });
+      }
+
+    res.json({ avgSubscriptionValue });
+  } catch (error) {
+    console.error('Error fetching average subscription value:', error);
+    res.status(500).json({ error: 'Failed to fetch average subscription value' });
+  }
+}
+

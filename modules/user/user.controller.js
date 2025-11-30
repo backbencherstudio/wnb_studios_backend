@@ -1,24 +1,19 @@
-import { OAuth2Client } from "google-auth-library";
-
 import dotenv from "dotenv";
 import validator from "validator";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import multer from "multer";
 import { PrismaClient } from "@prisma/client";
 import {
   generateOTP,
   receiveEmails,
   sendForgotPasswordOTP,
-  sendRegistrationOTPEmail,
 } from "../../utils/mailService.js";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import pkg from "jsonwebtoken";
+import passport from "../../config/passport.js"; // Import the configured passport instance
 
 const prisma = new PrismaClient();
-const { sign, verify } = pkg;
 dotenv.config();
 const { isEmail } = validator;
 const __filename = fileURLToPath(import.meta.url);
@@ -30,12 +25,92 @@ const hashPassword = async (password) => {
   return await bcrypt.hash(password, salt);
 };
 
+//get me
+export const getMe = async (req, res) => {
+  try {
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      console.log("Authentication failed. User ID is undefined:", req.user); // Log user info for debugging
+      return res.status(400).json({ message: "User not authenticated" });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        avatar: true,
+        role: true,
+        status: true,
+        date_of_birth: true,
+        phone_number: true,
+        city: true,
+        postal_code: true,
+        bio: true,
+        country: true,
+        address: true,
+        gender: true,
+        state: true,
+        type: true,
+        created_at: true,
+        updated_at: true,
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const imageUrl = user.avatar
+      ? `http://localhost:4005/uploads/${user.avatar}`
+      : null;
+
+    return res.status(200).json({
+      success: true,
+      message: "User details retrieved successfully",
+      data: { ...user, imageUrl },
+    });
+  } catch (error) {
+    // Log the error to help with debugging
+    console.error("Error retrieving user details:", error);
+
+    // Return a generic error response
+    return res
+      .status(500)
+      .json({ message: "Internal Server Error", error: error.message });
+  }
+};
+
+// Helper to calculate profile completion
+const calculateProfileCompletion = (user) => {
+  const fields = [
+    "name",
+    "email",
+    "address",
+    "country",
+    "gender",
+    "avatar",
+    "date_of_birth",
+    "city",
+    "phone_number",
+    "state",
+    "postal_code",
+    "type",
+    "bio",
+  ];
+
+  const filledFields = fields.filter((field) => user[field]);
+  return Math.round((filledFields.length / fields.length) * 100);
+};
+
 //--------------------register user--------------------
 // Register a new user
 export const registerUser = async (req, res) => {
   try {
-    const { email, password, name } = req.body;
-    if (!email || !password || !name) {
+    const { email, password, name, date_of_birth, gender, type } = req.body;
+    if (!email || !password) {
       return res.status(400).json({ message: "All fields are required" });
     }
     if (!isEmail(email)) {
@@ -56,9 +131,37 @@ export const registerUser = async (req, res) => {
       },
     });
 
-    return res.status(201).json({
+    // update user type
+    if (!type || (type !== "Individual" && type !== "Professional")) {
+      return res.status(400).json({ message: "Invalid user type" });
+    }
+
+    let updatedUser;
+
+    if (type === "Individual") {
+      updatedUser = await prisma.user.update({
+        where: { email },
+        data: {
+          type: "Individual",
+          name: name,
+          date_of_birth: date_of_birth || null,
+          gender: gender || null,
+        },
+      });
+    } else if (type === "Professional") {
+      updatedUser = await prisma.user.update({
+        where: { email },
+        data: { type: "Professional" },
+      });
+    }
+
+    // canlculate the progress of profile completion
+    const profileCompletion = calculateProfileCompletion(updatedUser);
+
+    return res.status(200).json({
       success: true,
       message: "User registered successfully",
+      data: { user: updatedUser, profileCompletion: profileCompletion },
     });
   } catch (error) {
     console.error("Error in registerUser:", error);
@@ -91,7 +194,21 @@ export const loginUser = async (req, res) => {
       });
     }
 
-    if (user.type == "ADMIN") {
+    if (user.status === "deactivated") {
+      return res.status(403).json({
+        message:
+          "Your account is deactivated. Please activate your account to log in.",
+      });
+    }
+
+    if (user.status === "suspended") {
+      return res.status(403).json({
+        message:
+          "Your account is suspended. Please contact support for assistance.",
+      });
+    }
+
+    if (user.type == "admin") {
       return res.status(403).json({
         message: "ADMIN YOU MUST LOG IN FROM ADMIN PANEL",
       });
@@ -102,6 +219,10 @@ export const loginUser = async (req, res) => {
       return res.status(401).json({ message: "Invalid password" });
     }
 
+    console.log("User ID", user.id, "password matched");
+
+    console.log("User ID", user.id, "password matched");
+
     const token = jwt.sign(
       { userId: user.id, email: user.email, role: user.role, type: user.type },
       process.env.JWT_SECRET,
@@ -110,6 +231,12 @@ export const loginUser = async (req, res) => {
 
     console.log("Token expires at:", token);
 
+    if (user.status === "deactivated") {
+      return res.status(403).json({
+        message: "Your account is deactivated. Please activate your account.",
+      });
+    }
+
     return res.status(200).json({
       success: true,
       message: "Login successful",
@@ -117,8 +244,9 @@ export const loginUser = async (req, res) => {
         id: user.id,
         name: user.name,
         email: user.email,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt,
+        createdAt: user.created_at,
+        updatedAt: user.updated_at,
+        role: user.role,
       },
       token,
     });
@@ -203,116 +331,91 @@ export const forgotPasswordOTPsend = async (req, res) => {
 };
 // Match forgot password OTP
 export const verifyForgotPasswordOTP = async (req, res) => {
-  try {
-    const { otp, email } = req.body;
+  const { otp, email } = req.body;
 
-    if (!otp || !email) {
-      return res.status(400).json({ message: "OTP and email are required" });
-    }
-
-    const existingTempUser = await prisma.temp.findUnique({
-      where: { email },
-    });
-
-    if (!existingTempUser) {
-      return res.status(400).json({ message: "Invalid or expired OTP" });
-    }
-
-    if (new Date() > new Date(existingTempUser.expires_at)) {
-      return res.status(400).json({
-        success: false,
-        message: "OTP expired. Please request a new OTP.",
-        shouldResendOtp: true,
-        ucodeId: existingTempUser.id,
-      });
-    }
-
-    if (existingTempUser.otp !== otp) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid OTP",
-      });
-    }
-
-    const jwtToken = jwt.sign(
-      {
-        userId: existingTempUser.id,
-        email: existingTempUser.email,
-      },
-      process.env.JWT_SECRET,
-      { expiresIn: "10d" }
-    );
-
-    await prisma.temp.delete({
-      where: { id: existingTempUser.id },
-    });
-
-    return res.status(200).json({
-      success: true,
-      message: "OTP matched successfully. You can now reset your password.",
-      token: jwtToken,
-    });
-  } catch (error) {
-    console.error("Error in verifyForgotPasswordOTP:", error);
-    return res.status(500).json({ message: "Internal Server Error" });
+  if (!otp || !email) {
+    return res.status(400).json({ message: "OTP and email are required" });
   }
+
+  const existingTempUser = await prisma.temp.findUnique({
+    where: { email },
+  });
+
+  if (!existingTempUser) {
+    return res.status(400).json({ message: "Invalid or expired OTP" });
+  }
+
+  if (new Date() > new Date(existingTempUser.expires_at)) {
+    return res.status(400).json({
+      message: "OTP expired. Please request a new OTP.",
+    });
+  }
+
+  if (existingTempUser.otp !== otp) {
+    return res.status(400).json({ message: "Invalid OTP" });
+  }
+
+  const jwtToken = jwt.sign(
+    { email: existingTempUser.email },
+    process.env.JWT_SECRET,
+    { expiresIn: "1h" }
+  );
+
+  await prisma.temp.delete({ where: { id: existingTempUser.id } });
+
+  return res.status(200).json({
+    message: "OTP matched successfully. Use the token to reset your password.",
+    token: jwtToken,
+  });
 };
+
 // Reset password
 export const resetPassword = async (req, res) => {
-  try {
-    const { newPassword } = req.body;
+  const { newPassword } = req.body;
 
-    if (!newPassword || newPassword.length < 8) {
-      return res
-        .status(400)
-        .json({ message: "Password must be at least 8 characters long" });
-    }
-
-    const token = req.headers["authorization"]?.split(" ")[1];
-
-    if (!token) {
-      return res
-        .status(400)
-        .json({ message: "Authorization token is required" });
-    }
-
-    let decoded;
-    try {
-      decoded = jwt.verify(token, process.env.JWT_SECRET);
-    } catch (error) {
-      return res.status(401).json({ message: "Invalid or expired token" });
-    }
-
-    const { email } = decoded;
-
-    const user = await prisma.user.findUnique({
-      where: { email },
-    });
-
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-
-    const updatedUser = await prisma.user.update({
-      where: { email },
-      data: { password: hashedPassword },
-    });
-
-    return res.status(200).json({
-      success: true,
-      message: "Password reset successfully",
-      user: {
-        id: updatedUser.id,
-        email: updatedUser.email,
-        name: updatedUser.name,
-      },
-    });
-  } catch (error) {
-    console.error("Error in resetPassword:", error);
-    return res.status(500).json({ message: "Internal Server Error" });
+  if (!newPassword || newPassword.length < 8) {
+    return res
+      .status(400)
+      .json({ message: "Password must be at least 8 characters long" });
   }
+
+  const token = req.headers.authorization?.split(" ")[1];
+
+  if (!token) {
+    return res.status(400).json({ message: "Authorization token is required" });
+  }
+
+  let decoded;
+  try {
+    decoded = jwt.verify(token, process.env.JWT_SECRET);
+  } catch (error) {
+    return res.status(401).json({ message: "Invalid or expired token" });
+  }
+
+  const { email } = decoded;
+
+  const user = await prisma.user.findUnique({
+    where: { email },
+  });
+
+  if (!user) {
+    return res.status(404).json({ message: "User not found" });
+  }
+  const isOldPasswordCorrect = await bcrypt.compare(newPassword, user.password);
+  if (isOldPasswordCorrect) {
+    return res
+      .status(400)
+      .json({ message: "New password cannot be the same as the old password" });
+  }
+
+  const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+  await prisma.user.update({
+    where: { email },
+    data: { password: hashedPassword },
+  });
+
+  return res.status(200).json({ message: "Password reset successfully" });
 };
 
 //---------------------user profile--------------------
@@ -331,7 +434,8 @@ export const authenticateUser = (req, res, next) => {
     next();
   });
 };
-//update user image
+
+//update user image 
 export const updateImage = async (req, res) => {
   console.log("Image upload: ", req.file);
 
@@ -370,7 +474,7 @@ export const updateImage = async (req, res) => {
       },
     });
 
-    const imageUrl = `http://localhost:8080/uploads/${newImage.filename}`;
+    const imageUrl = `http://localhost:4005/uploads/${newImage.filename}`;
 
     return res.status(200).json({
       success: true,
@@ -391,31 +495,40 @@ export const updateImage = async (req, res) => {
     });
   }
 };
+
 //update user details
 export const updateUserDetails = async (req, res) => {
   try {
-    const { name, email, address } = req.body;
+    const {
+      name,
+      date_of_birth,
+      address,
+      country,
+      city,
+      state,
+      postal_code,
+      phone_number,
+      bio,
+    } = req.body;
     const id = req.user?.userId;
 
     if (!id) {
       return res.status(400).json({ message: "User not authenticated" });
     }
 
-    const dataToUpdate = {};
-
-    if (name) dataToUpdate.name = name;
-    if (email) dataToUpdate.email = email;
-    if (address) dataToUpdate.address = address;
-
-    if (Object.keys(dataToUpdate).length === 0) {
-      return res
-        .status(400)
-        .json({ message: "No valid fields provided for update" });
-    }
-
     const user = await prisma.user.update({
       where: { id: id },
-      data: dataToUpdate,
+      data: {
+        name: name,
+        date_of_birth: date_of_birth || null,
+        address: address,
+        country: country,
+        city: city,
+        state: state,
+        postal_code: postal_code,
+        phone_number: phone_number,
+        bio: bio,
+      },
     });
 
     return res.status(200).json({
@@ -425,16 +538,15 @@ export const updateUserDetails = async (req, res) => {
     });
   } catch (error) {
     console.error("Error updating user details:", error);
-
     if (error.code === "P2025") {
       return res.status(404).json({ message: "User not found" });
     }
-
     return res
       .status(500)
       .json({ message: "Internal Server Error", error: error.message });
   }
 };
+
 //change password
 export const changePassword = async (req, res) => {
   try {
@@ -545,121 +657,81 @@ export const sendMailToAdmin = async (req, res) => {
       .json({ message: "Internal Server Error", error: error.message });
   }
 };
-//get me
-export const getMe = async (req, res) => {
+
+//----------- google login via using passport js ------------------
+export const googleLogin = (req, res) => {
+  passport.authenticate("google", { scope: ["profile", "email"] })(req, res);
+};
+
+export const googleCallback = (req, res) => {
+  passport.authenticate(
+    "google",
+    { failureRedirect: "/login" },
+    (err, userInfo) => {
+      if (err || !userInfo) {
+        return res
+          .status(500)
+          .json({ message: "Google authentication failed", error: err });
+      }
+
+      const { user, token } = userInfo;
+
+      res.status(200).json({
+        message: "Google login successful",
+        user,
+        token,
+      });
+    }
+  )(req, res);
+};
+
+//update passss
+export const updatePassword = async (req, res) => {
   try {
+    const { currentPassword, newPassword } = req.body;
     const userId = req.user?.userId;
 
     if (!userId) {
       return res.status(400).json({ message: "User not authenticated" });
     }
+    if (!currentPassword || !newPassword) {
+      return res
+        .status(400)
+        .json({ message: "Current and new passwords are required" });
+    }
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        avatar: true,
-        created_at: true,
-        updated_at: true,
-      },
     });
-
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    const imageUrl = user.avatar
-      ? `http://localhost:8080/uploads/${user.avatar}`
-      : null;
-
+    const isCurrentPasswordValid = await bcrypt.compare(
+      currentPassword,
+      user.password
+    );
+    if (!isCurrentPasswordValid) {
+      return res.status(401).json({ message: "Current password is incorrect" });
+    }
+    const hashedNewPassword = await hashPassword(newPassword);
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: { password: hashedNewPassword },
+    });
     return res.status(200).json({
       success: true,
-      message: "User details retrieved successfully",
-      data: { ...user, imageUrl },
+      message: "Password updated successfully",
+      user: {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        name: updatedUser.name,
+      },
     });
   } catch (error) {
-    console.error("Error retrieving user details:", error);
+    console.error("Error updating password:", error);
     return res
       .status(500)
       .json({ message: "Internal Server Error", error: error.message });
-  }
-};
-
-// Google login via ID token from frontend
-export const googleLogin = async (req, res) => {
-  const { idToken } = req.body;
-  if (!idToken) {
-    return res.status(400).json({ message: "ID token is required" });
-  }
-
-  const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
-  
-  try {
-    // Verify the ID Token with Google
-    const ticket = await client.verifyIdToken({
-      idToken,
-      audience: process.env.GOOGLE_CLIENT_ID,
-    });
-
-    const payload = ticket.getPayload();
-    console.log('Google Token Payload:', payload); // Log the payload for debugging
-
-    // Check if email exists in the payload
-    const email = payload.email;
-    if (!email) {
-      return res.status(400).json({ success: false, message: "Email is missing from the Google token payload" });
-    }
-    const name = payload.name;
-    const avatar = payload.picture;
-    
-    // Check if the user already exists in the database
-    let user = await prisma.user.findUnique({ where: { email } });
-    
-    if (!user) {
-      // Create new user if they do not exist
-      user = await prisma.user.create({
-        data: {
-          email,
-          name,
-          avatar,
-          password: "", // No password needed for Google login
-        },
-      });
-    } else {
-      // Update user information if necessary
-      user = await prisma.user.update({
-        where: { email },
-        data: { name, avatar },
-      });
-    }
-
-    // Issue a JWT token for the session
-    const token = jwt.sign(
-      { userId: user.id, email: user.email, role: user.role, type: user.type, googleId: payload.sub },
-      process.env.JWT_SECRET,
-      { expiresIn: "7d" }
-    );
-
-    // Send back the success response with user data and token
-    return res.status(200).json({
-      success: true,
-      message: "Google login successful",
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        avatar: user.avatar,
-      },
-      token,
-    });
-  } catch (error) {
-    // Return an error response if something goes wrong
-    return res.status(401).json({
-      success: false,
-      message: "Invalid Google token",
-      error: error.message,
-    });
   }
 };

@@ -1,0 +1,26 @@
+import express from "express";
+import {
+  createRating,
+  getAllRatings,
+  getRatingById,
+  updateRating,
+  deleteRating,
+  topRatedContentThisWeek,
+} from "./rating.controller.js";
+import { verifyUser } from "../../middlewares/verifyUsers.js";
+
+const router = express.Router();
+
+router.post("/", verifyUser("normal", "premium", "admin"), createRating);
+
+router.get("/", verifyUser("normal", "premium", "admin"), getAllRatings);
+
+router.get("/:id", verifyUser("normal", "premium", "admin"), getRatingById);
+
+router.put("/:id", verifyUser("normal", "premium", "admin"), updateRating);
+
+router.delete("/:id", verifyUser("normal", "premium", "admin"), deleteRating);
+
+router.get("/top/ratings", verifyUser("admin"), topRatedContentThisWeek);
+
+export default router;
