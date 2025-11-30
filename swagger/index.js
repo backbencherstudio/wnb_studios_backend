@@ -11,7 +11,7 @@ const users = YAML.load(path.join(__dirname, "users.yml"));
 export const swaggerSpec = {
   openapi: "3.0.0",
   info: {
-    title: "Streamly API Docs",
+    title: "wnb_studios API Docs",
     version: "1.0.0",
   },
   servers: [{ url: "http://localhost:4005" }],
