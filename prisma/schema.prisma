@@ -95,6 +95,7 @@ model User {
   reporterPosts    ReportPost[]      @relation("Reporter")
   clubs            Club[]
   pollVotes        PollVote[]
+  clubMemberships  ClubMember[]
 
   @@map("users")
 }
@@ -559,6 +560,12 @@ enum PostStatus {
   ANNOUNCEMENT
 }
 
+enum ClubRole {
+  ADMIN
+  MODERATOR
+  MEMBER
+}
+
 //---------------------------------- Club --------------------------------//
 
 model Club {
@@ -577,9 +584,31 @@ model Club {
   ownerId String
   owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
 
-  posts ClubPost[]
+  posts   ClubPost[]
+  members ClubMember[]
 
   @@index([ownerId])
+}
+
+//---------------------------------- Club Members ------------------------//
+
+model ClubMember {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  clubId String
+  club   Club   @relation(fields: [clubId], references: [id], onDelete: Cascade)
+
+  role ClubRole @default(MEMBER)
+
+  @@unique([userId, clubId])
+  @@index([userId])
+  @@index([clubId])
+  @@map("club_members")
 }
 
 //---------------------------------- Club Posts ---------------------------//

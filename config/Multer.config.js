@@ -26,14 +26,21 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage: storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, 
+  limits: { fileSize: 500 * 1024 * 1024 }, // 500MB limit
   fileFilter: (req, file, cb) => {
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif']; 
-    if (!allowedTypes.includes(file.mimetype)) {
-      return cb(new Error('Invalid file type'), false);  
+    // Allow any image or video file
+    if (
+      file.mimetype.startsWith("image/") ||
+      file.mimetype.startsWith("video/")
+    ) {
+      cb(null, true);
+    } else {
+      cb(
+        new Error("Invalid file type. Only images and videos are allowed."),
+        false
+      );
     }
-    cb(null, true); 
-  }
+  },
 });
 
 export { upload };
