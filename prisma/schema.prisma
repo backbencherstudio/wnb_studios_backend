@@ -40,32 +40,33 @@ enum Role {
 }
 
 model User {
-  id                     String         @id @default(cuid())
-  created_at             DateTime       @default(now())
-  updated_at             DateTime       @default(now())
-  deleted_at             DateTime?
-  email                  String         @unique
-  name                   String?
-  address                String?
-  password               String?
-  
-  customer_id            String?
-  country                String?
-  gender                 String?
-  status                 Status         @default(active)
-  role                   Role           @default(normal)
-  avatar                 String?        // public URL to avatar image
-  date_of_birth          DateTime?      @db.Date
-  city                   String?
-  phone_number           String?
-  suspend_endTime        DateTime?
-  state                  String?
-  postal_code            String?
+  id         String    @id @default(cuid())
+  created_at DateTime  @default(now())
+  updated_at DateTime  @default(now())
+  deleted_at DateTime?
+  email      String    @unique
+  name       String?
+  address    String?
+  password   String?
 
-  deactivation_start_date       DateTime?
-  deactivation_end_date         DateTime?
+  customer_id     String?
+  country         String?
+  gender          String?
+  status          Status    @default(active)
+  role            Role      @default(normal)
+  avatar          String? // public URL to avatar image
+  date_of_birth   DateTime? @db.Date
+  city            String?
+  phone_number    String?
+  suspend_endTime DateTime?
+  state           String?
+  postal_code     String?
+  type            String?
 
-  is_subscribed          Boolean?      @default(false) // for newsletter subscription
+  deactivation_start_date DateTime?
+  deactivation_end_date   DateTime?
+
+  is_subscribed          Boolean?       @default(false) // for newsletter subscription
   bio                    String?
   is_two_factor_enabled  Int?           @default(0)
   two_factor_secret      String? // secret key for two factor authentication
@@ -82,12 +83,11 @@ model User {
 
   EmailHistoryRecipient EmailHistoryRecipient[]
 
-
-
-  @@map("users ")
-  Rating Rating[]
-  Favourite Favourite[]
+  Rating      Rating[]
+  Favourite   Favourite[]
   HelpSupport HelpSupport[]
+
+  @@map("users")
 }
 
 model UserPaymentMethod {
@@ -153,12 +153,12 @@ model PaymentTransaction {
   subscription_id String?
   subscription    Subscription? @relation(fields: [subscription_id], references: [id])
 
-  provider String? 
-  price           Decimal? 
-  currency         String?
-  paid_amount      Decimal?
-  paid_currency    String?
-  payment_method  String?
+  provider       String?
+  price          Decimal?
+  currency       String?
+  paid_amount    Decimal?
+  paid_currency  String?
+  payment_method String?
 
   @@map("payment_transactions")
 }
@@ -220,10 +220,9 @@ model Subscription {
   created_at DateTime @default(now())
   updated_at DateTime @default(now())
 
-  
-  username       String?
-  email          String?
-  price           Float?
+  username String?
+  email    String?
+  price    Float?
 
   user_id String?
   user    User?   @relation(fields: [user_id], references: [id])
@@ -234,7 +233,7 @@ model Subscription {
   transaction_id String
   status         Status         @default(active)
 
-  start_date DateTime @default(now())
+  start_date DateTime  @default(now())
   end_date   DateTime?
 
   PaymentTransaction PaymentTransaction[]
@@ -244,16 +243,17 @@ model Subscription {
   Services Services[]
 }
 
-model Services{
-  id         String   @id @default(cuid())
-  created_at DateTime @default(now())
-  name       String
-  description String?
-  price      Float
-  features   String[]
-  plan       Plan 
-  @@map("services")
+model Services {
+  id           String         @id @default(cuid())
+  created_at   DateTime       @default(now())
+  name         String
+  description  String?
+  price        Float
+  features     String[]
+  plan         Plan
   Subscription Subscription[]
+
+  @@map("services")
 }
 
 model Live_streaming {
@@ -271,8 +271,8 @@ model Favourite {
   content_id String?
   content    Content? @relation(fields: [content_id], references: [id])
 
-  user_id    String?
-  user       User?   @relation(fields: [user_id], references: [id])
+  user_id String?
+  user    User?   @relation(fields: [user_id], references: [id])
 
   category_id String?
   category    Category? @relation(fields: [category_id], references: [id])
@@ -281,15 +281,14 @@ model Favourite {
   thumbnail   String? // optional public URL
   description String?
   rating      Int?    @default(0) // rating out of 5
-  
 }
+
 model Admin_settings {
   id         String   @id @default(cuid())
   created_at DateTime @default(now())
 }
 
 // for movie
-
 
 enum Genra {
   action
@@ -325,25 +324,25 @@ enum Content_status {
 }
 
 enum statusType {
-published
-draft
+  published
+  draft
 }
 
 model Content {
-  id               String          @id @default(cuid())
-  created_at       DateTime?       @default(now())
-  updated_at       DateTime?       @updatedAt
-  description      String?
+  id          String    @id @default(cuid())
+  created_at  DateTime? @default(now())
+  updated_at  DateTime? @updatedAt
+  description String?
 
-  title            String?
-  genre            Genra?
-  category_id      String?
-  category         Category?       @relation(fields: [category_id], references: [id])
-  content_type     String?
-  duration         String?         // or Int
-  content_status   Content_status   @default(draft)
+  title          String?
+  genre          Genra?
+  category_id    String?
+  category       Category?      @relation(fields: [category_id], references: [id])
+  content_type   String?
+  duration       String? // or Int
+  content_status Content_status @default(draft)
 
-  storage_provider String?         // "local" | "s3"
+  storage_provider String? // "local" | "s3"
   s3_bucket        String?
   s3_key           String?
   s3_thumb_key     String?
@@ -351,13 +350,13 @@ model Content {
   file_size_bytes  BigInt?
   etag             String?
   checksum_sha256  String?
-  status           statusType? @default(published) 
-  type             String?       @default("4k") 
-  view_count       Int?          @default(0)
+  status           statusType? @default(published)
+  type             String?     @default("4k")
+  view_count       Int?        @default(0)
 
-  thumbnail        String?         // optional public URL
-  video            String?         // optional public URL
-  is_premium     Boolean?       @default(false) // if true, only premium users can access this content
+  thumbnail  String? // optional public URL
+  video      String? // optional public URL
+  is_premium Boolean? @default(false) // if true, only premium users can access this content
 
   Rating Rating[]
 
@@ -365,44 +364,43 @@ model Content {
 }
 
 model Rating {
-  id         String   @id @default(cuid())
-  created_at DateTime @default(now())
-  updated_at DateTime @default(now())
+  id         String    @id @default(cuid())
+  created_at DateTime  @default(now())
+  updated_at DateTime  @default(now())
   deleted_at DateTime?
 
   user_id String?
   user    User?   @relation(fields: [user_id], references: [id])
 
   content_id String?
-  content   Content? @relation(fields: [content_id], references: [id])
+  content    Content? @relation(fields: [content_id], references: [id])
 
-  rating Int? @default(0) 
+  rating  Int?    @default(0)
   comment String?
 
   @@map("ratings")
 }
 
-
 model Category {
   id         String    @id @default(cuid())
-  created_at DateTime?  @default(now())
-  updated_at DateTime?  @default(now())
+  created_at DateTime? @default(now())
+  updated_at DateTime? @default(now())
   deleted_at DateTime?
   status     Int?      @default(1) @db.SmallInt
 
   name String?
   slug String? @unique
 
-  contents Content[]
+  contents  Content[]
+  Favourite Favourite[]
 
   @@map("categories")
-  Favourite Favourite[]
 }
 
 model Feature {
   id         String    @id @default(cuid())
-  created_at DateTime?  @default(now())
-  updated_at DateTime?  @default(now())
+  created_at DateTime? @default(now())
+  updated_at DateTime? @default(now())
   deleted_at DateTime?
   status     Int?      @default(1) @db.SmallInt
 
@@ -413,8 +411,8 @@ model Feature {
 
 model SecuritySettings {
   id         String    @id @default(cuid())
-  created_at DateTime?  @default(now())
-  updated_at DateTime?  @default(now())
+  created_at DateTime? @default(now())
+  updated_at DateTime? @default(now())
   deleted_at DateTime?
   status     Int?      @default(1) @db.SmallInt
 
@@ -500,11 +498,11 @@ model Order {
   @@map("orders")
 }
 
-
 enum HelpSupportStatus {
   Open
   Resolved
 }
+
 model HelpSupport {
   id         String    @id @default(cuid())
   created_at DateTime  @default(now())
@@ -514,13 +512,10 @@ model HelpSupport {
   user_id String?
   user    User?   @relation(fields: [user_id], references: [id])
 
-  subject String?
+  subject     String?
   description String? @db.Text
 
   status HelpSupportStatus @default(Open)
 
   @@map("help_and_support")
 }
-
-
-

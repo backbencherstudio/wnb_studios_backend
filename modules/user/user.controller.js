@@ -49,9 +49,13 @@ export const getMe = async (req, res) => {
         city: true,
         postal_code: true,
         bio: true,
-        
-
-
+        country: true,
+        address: true,
+        gender: true,
+        state: true,
+        type: true,
+        created_at: true,
+        updated_at: true,
       },
     });
 
@@ -79,12 +83,34 @@ export const getMe = async (req, res) => {
   }
 };
 
+// Helper to calculate profile completion
+const calculateProfileCompletion = (user) => {
+  const fields = [
+    "name",
+    "email",
+    "address",
+    "country",
+    "gender",
+    "avatar",
+    "date_of_birth",
+    "city",
+    "phone_number",
+    "state",
+    "postal_code",
+    "type",
+    "bio",
+  ];
+
+  const filledFields = fields.filter((field) => user[field]);
+  return Math.round((filledFields.length / fields.length) * 100);
+};
+
 //--------------------register user--------------------
 // Register a new user
 export const registerUser = async (req, res) => {
   try {
-    const { email, password, name } = req.body;
-    if (!email || !password || !name) {
+    const { email, password, name, date_of_birth, gender, type } = req.body;
+    if (!email || !password) {
       return res.status(400).json({ message: "All fields are required" });
     }
     if (!isEmail(email)) {
@@ -105,9 +131,37 @@ export const registerUser = async (req, res) => {
       },
     });
 
-    return res.status(201).json({
+    // update user type
+    if (!type || (type !== "Individual" && type !== "Professional")) {
+      return res.status(400).json({ message: "Invalid user type" });
+    }
+
+    let updatedUser;
+
+    if (type === "Individual") {
+      updatedUser = await prisma.user.update({
+        where: { email },
+        data: {
+          type: "Individual",
+          name: name,
+          date_of_birth: date_of_birth || null,
+          gender: gender || null,
+        },
+      });
+    } else if (type === "Professional") {
+      updatedUser = await prisma.user.update({
+        where: { email },
+        data: { type: "Professional" },
+      });
+    }
+
+    // canlculate the progress of profile completion
+    const profileCompletion = calculateProfileCompletion(updatedUser);
+
+    return res.status(200).json({
       success: true,
       message: "User registered successfully",
+      data: { user: updatedUser, profileCompletion: profileCompletion },
     });
   } catch (error) {
     console.error("Error in registerUser:", error);
@@ -168,7 +222,6 @@ export const loginUser = async (req, res) => {
     console.log("User ID", user.id, "password matched");
 
     console.log("User ID", user.id, "password matched");
-
 
     const token = jwt.sign(
       { userId: user.id, email: user.email, role: user.role, type: user.type },
@@ -304,7 +357,7 @@ export const verifyForgotPasswordOTP = async (req, res) => {
 
   const jwtToken = jwt.sign(
     { email: existingTempUser.email },
-    process.env.JWT_SECRET_KEY,
+    process.env.JWT_SECRET,
     { expiresIn: "1h" }
   );
 
@@ -321,7 +374,9 @@ export const resetPassword = async (req, res) => {
   const { newPassword } = req.body;
 
   if (!newPassword || newPassword.length < 8) {
-    return res.status(400).json({ message: "Password must be at least 8 characters long" });
+    return res
+      .status(400)
+      .json({ message: "Password must be at least 8 characters long" });
   }
 
   const token = req.headers.authorization?.split(" ")[1];
@@ -330,10 +385,9 @@ export const resetPassword = async (req, res) => {
     return res.status(400).json({ message: "Authorization token is required" });
   }
 
-
   let decoded;
   try {
-    decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
+    decoded = jwt.verify(token, process.env.JWT_SECRET);
   } catch (error) {
     return res.status(401).json({ message: "Invalid or expired token" });
   }
@@ -344,16 +398,15 @@ export const resetPassword = async (req, res) => {
     where: { email },
   });
 
-
-
   if (!user) {
     return res.status(404).json({ message: "User not found" });
   }
   const isOldPasswordCorrect = await bcrypt.compare(newPassword, user.password);
   if (isOldPasswordCorrect) {
-    return res.status(400).json({ message: "New password cannot be the same as the old password" });
+    return res
+      .status(400)
+      .json({ message: "New password cannot be the same as the old password" });
   }
-
 
   const hashedPassword = await bcrypt.hash(newPassword, 10);
 
@@ -364,8 +417,6 @@ export const resetPassword = async (req, res) => {
 
   return res.status(200).json({ message: "Password reset successfully" });
 };
-
-
 
 //---------------------user profile--------------------
 // Check if user is authenticated
@@ -383,7 +434,8 @@ export const authenticateUser = (req, res, next) => {
     next();
   });
 };
-//update user image
+
+//update user image 
 export const updateImage = async (req, res) => {
   console.log("Image upload: ", req.file);
 
@@ -449,7 +501,6 @@ export const updateUserDetails = async (req, res) => {
   try {
     const {
       name,
-      email,
       date_of_birth,
       address,
       country,
@@ -469,7 +520,6 @@ export const updateUserDetails = async (req, res) => {
       where: { id: id },
       data: {
         name: name,
-        email: email,
         date_of_birth: date_of_birth || null,
         address: address,
         country: country,
@@ -608,7 +658,6 @@ export const sendMailToAdmin = async (req, res) => {
   }
 };
 
-
 //----------- google login via using passport js ------------------
 export const googleLogin = (req, res) => {
   passport.authenticate("google", { scope: ["profile", "email"] })(req, res);
@@ -646,18 +695,22 @@ export const updatePassword = async (req, res) => {
       return res.status(400).json({ message: "User not authenticated" });
     }
     if (!currentPassword || !newPassword) {
-      return res.status(400).json({ message: "Current and new passwords are required" });
+      return res
+        .status(400)
+        .json({ message: "Current and new passwords are required" });
     }
 
-
     const user = await prisma.user.findUnique({
-      where: { id: userId},
+      where: { id: userId },
     });
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
+    const isCurrentPasswordValid = await bcrypt.compare(
+      currentPassword,
+      user.password
+    );
     if (!isCurrentPasswordValid) {
       return res.status(401).json({ message: "Current password is incorrect" });
     }
@@ -675,9 +728,10 @@ export const updatePassword = async (req, res) => {
         name: updatedUser.name,
       },
     });
+  } catch (error) {
+    console.error("Error updating password:", error);
+    return res
+      .status(500)
+      .json({ message: "Internal Server Error", error: error.message });
   }
-  catch (error) {
-    console.error('Error updating password:', error);
-    return res.status(500).json({ message: "Internal Server Error", error: error.message });
-  }
-}
+};
