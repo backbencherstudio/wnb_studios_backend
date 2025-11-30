@@ -1,5 +1,5 @@
 {
-  "name": "streamly",
+  "name": "wnb_studios",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -125,10 +125,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/backbencherstudio/Streamly_Backend.git"
+    "url": "git+https://github.com/backbencherstudio/wnb_studios_Backend.git"
   },
   "bugs": {
-    "url": "https://github.com/backbencherstudio/Streamly_Backend/issues"
+    "url": "https://github.com/backbencherstudio/wnb_studios_Backend/issues"
   },
-  "homepage": "https://github.com/backbencherstudio/Streamly_Backend#readme"
+  "homepage": "https://github.com/backbencherstudio/wnb_studios_Backend#readme"
 }

@@ -15,7 +15,7 @@ export const emailForgotPasswordOTP = (email, OTP) => {
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                 <tr>
                   <td style="background-color: #2c3e50; padding: 30px 40px;">
-                    <h1 style="color: #ffffff; font-family: 'Arial', 'Helvetica', sans-serif; font-size: 24px; font-weight: 600; margin: 0; letter-spacing: 0.3px;">Streamly Security</h1>
+                    <h1 style="color: #ffffff; font-family: 'Arial', 'Helvetica', sans-serif; font-size: 24px; font-weight: 600; margin: 0; letter-spacing: 0.3px;">wnb_studios Security</h1>
                   </td>
                 </tr>
               </table>
@@ -37,7 +37,7 @@ export const emailForgotPasswordOTP = (email, OTP) => {
                       Dear User,
                     </p>
                     <p style="color: #2c3e50; font-size: 15px; line-height: 24px; margin: 0 0 15px;">
-                      We have received a request to reset the password for your Streamly account. To verify your identity and proceed with this request, please use the following One-Time Password (OTP):
+                      We have received a request to reset the password for your wnb_studios account. To verify your identity and proceed with this request, please use the following One-Time Password (OTP):
                     </p>
                   </td>
                 </tr>
@@ -101,10 +101,10 @@ export const emailForgotPasswordOTP = (email, OTP) => {
                       Regards,
                     </p>
                     <p style="color: #2c3e50; font-size: 15px; line-height: 24px; margin: 0 0 5px;">
-                      <strong>Streamly Security Team</strong>
+                      <strong>wnb_studios Security Team</strong>
                     </p>
                     <p style="color: #2c3e50; font-size: 15px; line-height: 24px; margin: 0;">
-                      Streamly Corporation
+                      wnb_studios Corporation
                     </p>
                   </td>
                 </tr>
@@ -119,7 +119,7 @@ export const emailForgotPasswordOTP = (email, OTP) => {
                     </p>
                     <p style="color: #7f8c8d; font-size: 13px; line-height: 20px; margin: 0;">
                       This is a system-generated email. Please do not reply directly to this message.<br>
-                      © 2025 Streamly Corporation. All rights reserved.
+                      © 2025 wnb_studios Corporation. All rights reserved.
                     </p>
                   </td>
                 </tr>
@@ -148,7 +148,7 @@ export const emailRegisterUserOTP = (email, OTP) => {
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                 <tr>
                   <td style="background-color: #2c3e50; padding: 30px 40px;">
-                    <h1 style="color: #ffffff; font-family: 'Arial', 'Helvetica', sans-serif; font-size: 24px; font-weight: 600; margin: 0; letter-spacing: 0.3px;">Streamly Security</h1>
+                    <h1 style="color: #ffffff; font-family: 'Arial', 'Helvetica', sans-serif; font-size: 24px; font-weight: 600; margin: 0; letter-spacing: 0.3px;">wnb_studios Security</h1>
                   </td>
                 </tr>
               </table>
@@ -170,7 +170,7 @@ export const emailRegisterUserOTP = (email, OTP) => {
                       Dear User,
                     </p>
                     <p style="color: #2c3e50; font-size: 15px; line-height: 24px; margin: 0 0 15px;">
-                      Thank you for registering on Streamly. To complete your registration and verify your email address, please use the following One-Time Password (OTP):
+                      Thank you for registering on wnb_studios. To complete your registration and verify your email address, please use the following One-Time Password (OTP):
                     </p>
                   </td>
                 </tr>
@@ -234,10 +234,10 @@ export const emailRegisterUserOTP = (email, OTP) => {
                       Regards,
                     </p>
                     <p style="color: #2c3e50; font-size: 15px; line-height: 24px; margin: 0 0 5px;">
-                      <strong>Streamly Security Team</strong>
+                      <strong>wnb_studios Security Team</strong>
                     </p>
                     <p style="color: #2c3e50; font-size: 15px; line-height: 24px; margin: 0;">
-                      Streamly Corporation
+                      wnb_studios Corporation
                     </p>
                   </td>
                 </tr>
@@ -252,7 +252,7 @@ export const emailRegisterUserOTP = (email, OTP) => {
                     </p>
                     <p style="color: #7f8c8d; font-size: 13px; line-height: 20px; margin: 0;">
                       This is a system-generated email. Please do not reply directly to this message.<br>
-                      © 2025 Streamly Corporation. All rights reserved.
+                      © 2025 wnb_studios Corporation. All rights reserved.
                     </p>
                   </td>
                 </tr>
@@ -281,7 +281,7 @@ export const sendAdminInvitationEmails = (email, password) => {
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                 <tr>
                   <td style="background-color: #2c3e50; padding: 30px 40px;">
-                    <h1 style="color: #ffffff; font-family: 'Arial', 'Helvetica', sans-serif; font-size: 24px; font-weight: 600; margin: 0; letter-spacing: 0.3px;">Streamly Admin Portal</h1>
+                    <h1 style="color: #ffffff; font-family: 'Arial', 'Helvetica', sans-serif; font-size: 24px; font-weight: 600; margin: 0; letter-spacing: 0.3px;">wnb_studios Admin Portal</h1>
                   </td>
                 </tr>
               </table>
@@ -303,7 +303,7 @@ export const sendAdminInvitationEmails = (email, password) => {
                       Dear Administrator,
                     </p>
                     <p style="color: #2c3e50; font-size: 15px; line-height: 24px; margin: 0 0 15px;">
-                      You have been invited to join the Streamly Admin Portal. Below are your temporary login credentials:
+                      You have been invited to join the wnb_studios Admin Portal. Below are your temporary login credentials:
                     </p>
                   </td>
                 </tr>
@@ -380,10 +380,10 @@ export const sendAdminInvitationEmails = (email, password) => {
                       Regards,
                     </p>
                     <p style="color: #2c3e50; font-size: 15px; line-height: 24px; margin: 0 0 5px;">
-                      <strong>Streamly Admin Team</strong>
+                      <strong>wnb_studios Admin Team</strong>
                     </p>
                     <p style="color: #2c3e50; font-size: 15px; line-height: 24px; margin: 0;">
-                      Streamly Corporation
+                      wnb_studios Corporation
                     </p>
                   </td>
                 </tr>
@@ -398,7 +398,7 @@ export const sendAdminInvitationEmails = (email, password) => {
                     </p>
                     <p style="color: #7f8c8d; font-size: 13px; line-height: 20px; margin: 0;">
                       This is a confidential system-generated email. Please do not forward or share its contents.<br>
-                      © 2025 Streamly Corporation. All rights reserved.
+                      © 2025 wnb_studios Corporation. All rights reserved.
                     </p>
                   </td>
                 </tr>
@@ -489,7 +489,7 @@ export const receiveEmailTemplate = (email, subject, message) => {
                       Regards,
                     </p>
                     <p style="color: #2c3e50; font-size: 15px; line-height: 24px; margin: 0;">
-                      <strong>Streamly Support</strong>
+                      <strong>wnb_studios Support</strong>
                     </p>
                   </td>
                 </tr>
@@ -501,7 +501,7 @@ export const receiveEmailTemplate = (email, subject, message) => {
                   <td style="background-color: #f5f5f5; padding: 20px 40px; text-align: center; border-top: 1px solid #e0e0e0;">
                     <p style="color: #7f8c8d; font-size: 13px; line-height: 20px; margin: 0;">
                       This message was sent via your website contact form.<br>
-                      © ${new Date().getFullYear()} Streamly Corporation. All rights reserved.
+                      © ${new Date().getFullYear()} wnb_studios Corporation. All rights reserved.
                     </p>
                   </td>
                 </tr>
@@ -890,7 +890,7 @@ export const emailSuspendUser = (email, suspend_endTime) => {
             <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
               <tr>
                 <td style="background-color: #e74c3c; padding: 30px 40px;">
-                  <h1 style="color: #ffffff; font-family: 'Arial', 'Helvetica', sans-serif; font-size: 24px; font-weight: 600; margin: 0; letter-spacing: 0.3px;">Streamly Security</h1>
+                  <h1 style="color: #ffffff; font-family: 'Arial', 'Helvetica', sans-serif; font-size: 24px; font-weight: 600; margin: 0; letter-spacing: 0.3px;">wnb_studios Security</h1>
                 </td>
               </tr>
             </table>
@@ -912,7 +912,7 @@ export const emailSuspendUser = (email, suspend_endTime) => {
                     Dear User,
                   </p>
                   <p style="color: #2c3e50; font-size: 15px; line-height: 24px; margin: 0 0 15px;">
-                    Your Streamly account has been temporarily suspended. The suspension will remain in effect until ${suspend_endTime}. If you need assistance or have any questions, please feel free to contact our support team.
+                    Your wnb_studios account has been temporarily suspended. The suspension will remain in effect until ${suspend_endTime}. If you need assistance or have any questions, please feel free to contact our support team.
                   </p>
                 </td>
               </tr>
@@ -946,10 +946,10 @@ export const emailSuspendUser = (email, suspend_endTime) => {
                     Regards,
                   </p>
                   <p style="color: #2c3e50; font-size: 15px; line-height: 24px; margin: 0 0 5px;">
-                    <strong>Streamly Security Team</strong>
+                    <strong>wnb_studios Security Team</strong>
                   </p>
                   <p style="color: #2c3e50; font-size: 15px; line-height: 24px; margin: 0;">
-                    Streamly Corporation
+                    wnb_studios Corporation
                   </p>
                 </td>
               </tr>
@@ -979,7 +979,7 @@ export const emailUnsuspendUser = (email) => {
             <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
               <tr>
                 <td style="background-color: #27ae60; padding: 30px 40px;">
-                  <h1 style="color: #ffffff; font-family: 'Arial', 'Helvetica', sans-serif; font-size: 24px; font-weight: 600; margin: 0; letter-spacing: 0.3px;">Streamly Security</h1>
+                  <h1 style="color: #ffffff; font-family: 'Arial', 'Helvetica', sans-serif; font-size: 24px; font-weight: 600; margin: 0; letter-spacing: 0.3px;">wnb_studios Security</h1>
                 </td>
               </tr>
             </table>
@@ -1001,7 +1001,7 @@ export const emailUnsuspendUser = (email) => {
                     Dear User,
                   </p>
                   <p style="color: #2c3e50; font-size: 15px; line-height: 24px; margin: 0 0 15px;">
-                    Your Streamly account has been successfully reactivated. You can now log in and continue using your account.
+                    Your wnb_studios account has been successfully reactivated. You can now log in and continue using your account.
                   </p>
                 </td>
               </tr>
@@ -1018,10 +1018,10 @@ export const emailUnsuspendUser = (email) => {
                     Regards,
                   </p>
                   <p style="color: #2c3e50; font-size: 15px; line-height: 24px; margin: 0 0 5px;">
-                    <strong>Streamly Security Team</strong>
+                    <strong>wnb_studios Security Team</strong>
                   </p>
                   <p style="color: #2c3e50; font-size: 15px; line-height: 24px; margin: 0;">
-                    Streamly Corporation
+                    wnb_studios Corporation
                   </p>
                 </td>
               </tr>
@@ -1051,7 +1051,7 @@ export const emailDeactivateUser = (email, deactivationPeriod) => {
             <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
               <tr>
                 <td style="background-color: #e74c3c; padding: 30px 40px;">
-                  <h1 style="color: #ffffff; font-family: 'Arial', 'Helvetica', sans-serif; font-size: 24px; font-weight: 600; margin: 0; letter-spacing: 0.3px;">Streamly Security</h1>
+                  <h1 style="color: #ffffff; font-family: 'Arial', 'Helvetica', sans-serif; font-size: 24px; font-weight: 600; margin: 0; letter-spacing: 0.3px;">wnb_studios Security</h1>
                 </td>
               </tr>
             </table>
@@ -1073,7 +1073,7 @@ export const emailDeactivateUser = (email, deactivationPeriod) => {
                     Dear User,
                   </p>
                   <p style="color: #2c3e50; font-size: 15px; line-height: 24px; margin: 0 0 15px;">
-                    We regret to inform you that your Streamly account has been temporarily deactivated. Your account will remain deactivated for the next ${deactivationPeriod} days.
+                    We regret to inform you that your wnb_studios account has been temporarily deactivated. Your account will remain deactivated for the next ${deactivationPeriod} days.
                   </p>
                 </td>
               </tr>
@@ -1110,10 +1110,10 @@ export const emailDeactivateUser = (email, deactivationPeriod) => {
                     Regards,
                   </p>
                   <p style="color: #2c3e50; font-size: 15px; line-height: 24px; margin: 0 0 5px;">
-                    <strong>Streamly Security Team</strong>
+                    <strong>wnb_studios Security Team</strong>
                   </p>
                   <p style="color: #2c3e50; font-size: 15px; line-height: 24px; margin: 0;">
-                    Streamly Corporation
+                    wnb_studios Corporation
                   </p>
                 </td>
               </tr>
@@ -1143,7 +1143,7 @@ export const emailReactivateUser = (email) => {
             <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
               <tr>
                 <td style="background-color: #27ae60; padding: 30px 40px;">
-                  <h1 style="color: #ffffff; font-family: 'Arial', 'Helvetica', sans-serif; font-size: 24px; font-weight: 600; margin: 0; letter-spacing: 0.3px;">Streamly Security</h1>
+                  <h1 style="color: #ffffff; font-family: 'Arial', 'Helvetica', sans-serif; font-size: 24px; font-weight: 600; margin: 0; letter-spacing: 0.3px;">wnb_studios Security</h1>
                 </td>
               </tr>
             </table>
@@ -1165,7 +1165,7 @@ export const emailReactivateUser = (email) => {
                     Dear User,
                   </p>
                   <p style="color: #2c3e50; font-size: 15px; line-height: 24px; margin: 0 0 15px;">
-                    Your Streamly account has been successfully reactivated. You can now log in and continue using your account.
+                    Your wnb_studios account has been successfully reactivated. You can now log in and continue using your account.
                   </p>
                 </td>
               </tr>
@@ -1182,10 +1182,10 @@ export const emailReactivateUser = (email) => {
                     Regards,
                   </p>
                   <p style="color: #2c3e50; font-size: 15px; line-height: 24px; margin: 0 0 5px;">
-                    <strong>Streamly Security Team</strong>
+                    <strong>wnb_studios Security Team</strong>
                   </p>
                   <p style="color: #2c3e50; font-size: 15px; line-height: 24px; margin: 0;">
-                    Streamly Corporation
+                    wnb_studios Corporation
                   </p>
                 </td>
               </tr>

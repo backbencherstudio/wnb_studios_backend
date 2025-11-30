@@ -1,6 +1,6 @@
 type: collection.insomnia.rest/5.0
 schema_version: "5.1"
-name: Streamly
+name: wnb_studios
 meta:
   id: wrk_e0944feb9f634eafa789eec5be645eed
   created: 1754819647737
@@ -28,7 +28,7 @@ collection:
         send: true
         store: true
       rebuildPath: true
-  - name: Streamly
+  - name: wnb_studios
     meta:
       id: fld_d20d514995d849dfbec95330ed310b49
       created: 1754819950638
@@ -1150,8 +1150,8 @@ collection:
                   mimeType: application/json
                   text: |-
                     {
-                        "name": "Streamly Original",
-                        "slug": "Streamly Original",
+                        "name": "wnb_studios Original",
+                        "slug": "wnb_studios Original",
                         "status": 1
                       }
                 headers:
