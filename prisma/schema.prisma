@@ -96,6 +96,9 @@ model User {
   clubs            Club[]
   pollVotes        PollVote[]
   clubMemberships  ClubMember[]
+  chatMessages     ChatMessage[]
+  messageReads     MessageRead[]
+  typingIndicators TypingIndicator[]
 
   @@map("users")
 }
@@ -584,8 +587,9 @@ model Club {
   ownerId String
   owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
 
-  posts   ClubPost[]
-  members ClubMember[]
+  posts        ClubPost[]
+  members      ClubMember[]
+  clubChatRoom ClubChatRoom?
 
   @@index([ownerId])
 }
@@ -802,4 +806,102 @@ model ReportPost {
 
   @@index([postId])
   @@index([reporterId])
+}
+
+//---------------------------------- Club Chat Room ------------------------//
+
+model ClubChatRoom {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  clubId String @unique
+  club   Club   @relation(fields: [clubId], references: [id], onDelete: Cascade)
+
+  messages         ChatMessage[]
+  typingIndicators TypingIndicator[]
+}
+
+//---------------------------------- Chat Messages --------------------------//
+
+enum ChatMessageType {
+  TEXT
+  IMAGE
+  VIDEO
+  FILE
+  SYSTEM
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  type      ChatMessageType @default(TEXT)
+  text      String?
+  mediaUrl  String? // For image/video/file
+  thumbnail String? // Optional: for image/video preview
+
+  // Author
+  senderId String
+  sender   User   @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  // Chat Room
+  roomId String
+  room   ClubChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  attachments MessageAttachment[]
+  reads       MessageRead[]
+
+  @@index([roomId])
+  @@index([senderId])
+}
+
+//---------------------------------- Attachments ----------------------------//
+
+model MessageAttachment {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  url  String
+  type MediaType // PHOTO | VIDEO
+
+  messageId String
+  message   ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
+}
+
+//---------------------------------- Message Reads --------------------------//
+
+model MessageRead {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  messageId String
+  message   ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId])
+  @@index([messageId])
+  @@index([userId])
+}
+
+//---------------------------------- Typing Indicators ----------------------//
+
+model TypingIndicator {
+  id        String   @id @default(cuid())
+  updatedAt DateTime @updatedAt
+
+  roomId String
+  room   ClubChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, userId])
+  @@index([roomId])
+  @@index([userId])
 }
