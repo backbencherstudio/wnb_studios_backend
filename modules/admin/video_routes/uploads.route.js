@@ -8,6 +8,7 @@ import { mediaQueue } from '../../libs/queue.js';
 
 const prisma = new PrismaClient();
 const router = express.Router();
+const app = express();
 
 const uploadDir = path.resolve(process.cwd(), 'tmp_uploads');
 fs.mkdirSync(uploadDir, { recursive: true });
@@ -80,7 +81,53 @@ router.post('/video', upload.fields([
   }
 });
 
-const app = express();
+router.post("/upload_reels_video", upload.single("file"), async (req, res, next) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'Video file is required' });
+    }
+
+    const { title, description } = req.body;
+    const videoFile = req.file;
+
+    const userId = req.userId;
+
+    const reel = await prisma.reels.create({
+      data: {
+        title: title ?? null,
+        description: description ?? null,
+        storage_provider: 's3',
+        original_name: videoFile.originalname,
+        file_size_bytes: BigInt(videoFile.size),
+        video: `/uploads/reels/${videoFile.filename}`,
+        userId: userId,
+      },
+    });
+
+    if (reel.storage_provider === 's3') {
+      await mediaQueue.add('push-to-s3', {
+        contentId: reel.id,
+        localPath: videoFile.path,
+        s3Bucket: 'your-s3-bucket-name',
+        s3Key: `reels/${reel.id}/${videoFile.filename}`,
+      });
+    }
+
+    res.json({
+      id: reel.id,
+      title: reel.title,
+      description: reel.description,
+      videoUrl: reel.video,
+      createdAt: reel.created_at,
+    });
+  } catch (err) {
+    next(err);
+    console.log('Error uploading reel:', err);
+  }
+});
+
+
+
 app.use('/uploads', express.static(path.resolve(process.cwd(), 'tmp_uploads')));
 
 export default router;
