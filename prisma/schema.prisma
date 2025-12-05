@@ -11,7 +11,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  //url      = env("DATABASE_URL")
 }
 
 model Temp {
@@ -88,24 +88,27 @@ model User {
 
   EmailHistoryRecipient EmailHistoryRecipient[]
 
-  rating                    Rating[]
-  favourite                 Favourite[]
-  helpSupport               HelpSupport[]
-  clubPosts                 ClubPost[]
-  postLikes                 PostLike[]
-  postComments              PostComment[]
-  postCommentLikes          PostCommentLike[]
-  postShares                PostShare[]
-  clubPoll                  ClubPoll[]
-  reporterPosts             ReportPost[]               @relation("Reporter")
-  clubs                     Club[]
-  pollVotes                 PollVote[]
-  clubMemberships           ClubMember[]
-  chatMessages              ChatMessage[]
-  messageReads              MessageRead[]
-  devices                   UserDevice[]
-  typingIndicators          TypingIndicator[]
+  rating                   Rating[]
+  favourite                Favourite[]
+  helpSupport              HelpSupport[]
+  clubPosts                ClubPost[]
+  postLikes                PostLike[]
+  postComments             PostComment[]
+  postCommentLikes         PostCommentLike[]
+  postShares               PostShare[]
+  clubPoll                 ClubPoll[]
+  reporterPosts            ReportPost[]              @relation("Reporter")
+  clubs                    Club[]
+  pollVotes                PollVote[]
+  clubMemberships          ClubMember[]
+  chatMessages             ChatMessage[]
+  messageReads             MessageRead[]
+  devices                  UserDevice[]
+  typingIndicators         TypingIndicator[]
   professionalVerification ProfessionalVerification?
+  reelComments             ReelComment[]
+  reels                    Reels[]                   @relation("ReelLikes")
+  reelss                   Reels[]
 
   @@map("users")
 }
@@ -971,4 +974,52 @@ model UserDevice {
   createdAt  DateTime @default(now())
 
   @@unique([userId, deviceId])
+}
+
+// ---------------------------------- Reels --------------------------//
+model Reels {
+  id         String    @id @default(cuid())
+  created_at DateTime? @default(now())
+  updated_at DateTime? @updatedAt
+
+  title       String?
+  description String?
+
+  storage_provider String? // "local" | "s3"
+  s3_bucket        String?
+  s3_key           String?
+  s3_thumb_key     String?
+  original_name    String?
+  file_size_bytes  BigInt?
+  etag             String?
+  checksum_sha256  String?
+  video            String? // optional public URL
+
+  likes User[] @relation("ReelLikes")
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id])
+
+  comments ReelComment[]
+}
+
+model ReelComment {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  content String
+
+  reelId String
+  reel   Reels  @relation(fields: [reelId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  replies      ReelComment[] @relation("ReelCommentReplies")
+  parentId     String?
+  reelComments ReelComment[] @relation("ReelCommentReplies")
+
+  @@index([reelId])
+  @@index([userId])
 }
