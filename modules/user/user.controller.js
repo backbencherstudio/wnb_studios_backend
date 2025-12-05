@@ -219,6 +219,59 @@ export const loginUser = async (req, res) => {
       return res.status(401).json({ message: "Invalid password" });
     }
 
+    // Device Management
+    const { deviceName, deviceType, deviceId } = req.body;
+    
+    // Only enforce device limit if device info is provided or we want to enforce it strictly.
+    // Assuming we want to enforce it.
+    
+    let currentDevice = null;
+    if (deviceId) {
+      currentDevice = await prisma.userDevice.findUnique({
+        where: {
+          userId_deviceId: {
+            userId: user.id,
+            deviceId: deviceId
+          }
+        }
+      });
+    }
+
+    if (currentDevice) {
+      // Update last active
+      await prisma.userDevice.update({
+        where: { id: currentDevice.id },
+        data: { 
+          lastActive: new Date(),
+          deviceName: deviceName || currentDevice.deviceName,
+          deviceType: deviceType || currentDevice.deviceType
+        }
+      });
+    } else {
+      // Check limit
+      const deviceCount = await prisma.userDevice.count({
+        where: { userId: user.id }
+      });
+
+      if (deviceCount >= 3) {
+        return res.status(403).json({
+          message: "Device limit reached (Max 3). Please remove a device to login.",
+          error: "DEVICE_LIMIT_REACHED"
+        });
+      }
+
+      // Create new device
+      await prisma.userDevice.create({
+        data: {
+          userId: user.id,
+          deviceName: deviceName || "Unknown Device",
+          deviceType: deviceType || "Unknown",
+          deviceId: deviceId || `gen-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          lastActive: new Date()
+        }
+      });
+    }
+
     console.log("User ID", user.id, "password matched");
 
     console.log("User ID", user.id, "password matched");
@@ -420,7 +473,7 @@ export const resetPassword = async (req, res) => {
 
 //---------------------user profile--------------------
 // Check if user is authenticated
-export const authenticateUser = (req, res, next) => {
+export const authenticateUser = async (req, res, next) => {
   const token = req.headers.authorization?.split(" ")[1];
   if (!token) {
     return res.status(401).json({ message: "No token provided" });
@@ -435,7 +488,7 @@ export const authenticateUser = (req, res, next) => {
   });
 };
 
-//update user image 
+//update user image
 export const updateImage = async (req, res) => {
   console.log("Image upload: ", req.file);
 
@@ -734,4 +787,125 @@ export const updatePassword = async (req, res) => {
       .status(500)
       .json({ message: "Internal Server Error", error: error.message });
   }
+};
+
+export const disableAccount = async (req, res) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(400).json({ message: "User not authenticated" });
+    }
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: { status: "deactivated" },
+    });
+    return res.status(200).json({
+      success: true,
+      message: "Account disabled successfully",
+      data: user,
+    });
+  } catch (error) {
+    console.error("Error disabling account:", error);
+    return res
+      .status(500)
+      .json({ message: "Internal Server Error", error: error.message });
+  }
+};
+
+export const enableAccount = async (req, res) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(400).json({ message: "User not authenticated" });
+    }
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: { status: "active" },
+    });
+    return res.status(200).json({
+      success: true,
+      message: "Account enabled successfully",
+      data: user,
+    });
+  } catch (error) {
+    console.error("Error enabling account:", error);
+    return res
+      .status(500)
+      .json({ message: "Internal Server Error", error: error.message });
+  }
+};
+
+export const deleteAccount = async (req, res) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(400).json({ message: "User not authenticated" });
+    }
+    await prisma.user.delete({
+      where: { id: userId },
+    });
+    return res.status(200).json({
+      success: true,
+      message: "Account deleted successfully",
+    });
+  } catch (error) {
+    console.error("Error deleting account:", error);
+    return res
+      .status(500)
+      .json({ message: "Internal Server Error", error: error.message });
+  }
+};
+
+// Get connected devices
+export const getDevices = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const devices = await prisma.userDevice.findMany({
+      where: { userId },
+      orderBy: { lastActive: 'desc' }
+    });
+    
+    // Mark current device if possible (requires client to send deviceId in header or we infer it)
+    // For now, just return list.
+    
+    res.status(200).json({ success: true, data: devices });
+  } catch (error) {
+    console.error("Error fetching devices:", error);
+    res.status(500).json({ message: "Error fetching devices", error: error.message });
+  }
+};
+
+// Remove a device
+export const removeDevice = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { deviceId } = req.params; // This is the DB ID (UserDevice.id)
+
+    const device = await prisma.userDevice.findFirst({
+      where: { id: deviceId, userId }
+    });
+
+    if (!device) {
+      return res.status(404).json({ message: "Device not found" });
+    }
+
+    await prisma.userDevice.delete({
+      where: { id: deviceId }
+    });
+
+    res.status(200).json({ success: true, message: "Device removed successfully" });
+  } catch (error) {
+    console.error("Error removing device:", error);
+    res.status(500).json({ message: "Error removing device", error: error.message });
+  }
+};
+
+export const logoutUser = (req, res) => {
+  req.logout((err) => {
+    if (err) {
+      return res.status(500).json({ message: "Logout failed", error: err });
+    }
+
+    res.status(200).json({ message: "Logout successful" });
+  });
 };

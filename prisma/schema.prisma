@@ -39,6 +39,11 @@ enum Role {
   admin
 }
 
+enum Type {
+  Individual
+  Professional
+}
+
 model User {
   id         String    @id @default(cuid())
   created_at DateTime  @default(now())
@@ -61,7 +66,7 @@ model User {
   suspend_endTime DateTime?
   state           String?
   postal_code     String?
-  type            String?
+  type            Type?
 
   deactivation_start_date DateTime?
   deactivation_end_date   DateTime?
@@ -83,24 +88,66 @@ model User {
 
   EmailHistoryRecipient EmailHistoryRecipient[]
 
-  rating           Rating[]
-  favourite        Favourite[]
-  helpSupport      HelpSupport[]
-  clubPosts        ClubPost[]
-  postLikes        PostLike[]
-  postComments     PostComment[]
-  postCommentLikes PostCommentLike[]
-  postShares       PostShare[]
-  clubPoll         ClubPoll[]
-  reporterPosts    ReportPost[]      @relation("Reporter")
-  clubs            Club[]
-  pollVotes        PollVote[]
-  clubMemberships  ClubMember[]
-  chatMessages     ChatMessage[]
-  messageReads     MessageRead[]
-  typingIndicators TypingIndicator[]
+  rating                    Rating[]
+  favourite                 Favourite[]
+  helpSupport               HelpSupport[]
+  clubPosts                 ClubPost[]
+  postLikes                 PostLike[]
+  postComments              PostComment[]
+  postCommentLikes          PostCommentLike[]
+  postShares                PostShare[]
+  clubPoll                  ClubPoll[]
+  reporterPosts             ReportPost[]               @relation("Reporter")
+  clubs                     Club[]
+  pollVotes                 PollVote[]
+  clubMemberships           ClubMember[]
+  chatMessages              ChatMessage[]
+  messageReads              MessageRead[]
+  devices                   UserDevice[]
+  typingIndicators          TypingIndicator[]
+  professionalVerification ProfessionalVerification?
 
   @@map("users")
+}
+
+enum VerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model ProfessionalVerification {
+  id         String    @id @default(cuid())
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+  deleted_at DateTime?
+
+  user_id String @unique
+  user    User   @relation(fields: [user_id], references: [id])
+
+  // Identity Verification
+  identity_document_type String?
+  identity_document_url  String?
+
+  // Address Verification
+  address_document_type String?
+  address_document_url  String?
+
+  // Payment Information
+  payout_method            String?
+  bank_account_holder_name String?
+  bank_name                String?
+  bank_account_number      String?
+
+  // Company Verification
+  business_type             String?
+  business_name             String?
+  business_registration_url String?
+  tax_id                    String?
+
+  status VerificationStatus @default(PENDING)
+
+  @@map("professional_verifications")
 }
 
 model UserPaymentMethod {
@@ -904,4 +951,24 @@ model TypingIndicator {
   @@unique([roomId, userId])
   @@index([roomId])
   @@index([userId])
+}
+
+model BlacklistedToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model UserDevice {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deviceName String?
+  deviceType String?
+  deviceId   String?
+  lastActive DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, deviceId])
 }

@@ -10,13 +10,22 @@ import {
   changePassword,
   sendMailToAdmin,
   getMe,
-  googleLogin, 
+  googleLogin,
   googleCallback,
   authenticateUser,
-  updatePassword
+  updatePassword,
+  disableAccount,
+  enableAccount,
+  deleteAccount,
+  logoutUser,
+  getDevices,
+  removeDevice,
 } from "./user.controller.js";
 import { upload } from "../../config/Multer.config.js";
 import { verifyUser } from "../../middlewares/verifyUsers.js";
+// Professional Verification
+import { submitProfessionalVerification, getProfessionalVerificationStatus } from "./professional.controller.js";
+
 
 const router = express.Router();
 
@@ -81,7 +90,38 @@ router.put(
 router.post("/sende-mail", verifyUser("USER"), sendMailToAdmin);
 
 //get me
-router.get("/get-me",authenticateUser, getMe);
+router.get("/get-me", authenticateUser, getMe);
 //update pass
-router.put('/updatePass', authenticateUser ,updatePassword )
+router.put("/updatePass", authenticateUser, updatePassword);
+
+// Disable account
+router.put("/disable-account", authenticateUser, disableAccount);
+
+// Enable account
+router.put("/enable-account", authenticateUser, enableAccount);
+
+// Delete account
+router.delete("/delete-account", authenticateUser, deleteAccount);
+
+// Logout
+router.get("/logout", authenticateUser, logoutUser);
+
+// Device Management
+router.get("/devices", authenticateUser, getDevices);
+router.delete("/devices/:deviceId", authenticateUser, removeDevice);
+
+
+router.post(
+  "/professional-verification",
+  authenticateUser,
+  upload.fields([
+    { name: "identity_document", maxCount: 1 },
+    { name: "address_document", maxCount: 1 },
+    { name: "business_registration", maxCount: 1 },
+  ]),
+  submitProfessionalVerification
+);
+
+router.get("/professional-verification", authenticateUser, getProfessionalVerificationStatus);
+
 export default router;
