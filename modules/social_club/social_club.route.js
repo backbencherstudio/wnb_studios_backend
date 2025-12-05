@@ -26,6 +26,8 @@ import {
 } from "./social_club.controller.js";
 import { upload } from "../../config/Multer.config.js";
 import { verifyUser } from "../../middlewares/verifyUsers.js";
+import chatRoutes from "./chat/chat.route.js";
+import { listUserRoomsHandler } from "./chat/chat.controller.js";
 
 const router = express.Router();
 
@@ -141,5 +143,11 @@ router.put("/:clubId/privacy", verifyUser("ANY"), changeClubPrivacy);
 // Manage club member role (Promote/Demote)
 // Access: Private (Owner only)
 router.post("/member/role", verifyUser("ANY"), manageClubMemberRole);
+
+// Mount chat routes for each club
+router.use("/:clubId/chat", chatRoutes);
+
+// Get list of rooms the authenticated user has joined
+router.get("/chat/rooms", verifyUser("ANY"), listUserRoomsHandler);
 
 export default router;
