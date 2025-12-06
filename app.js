@@ -16,7 +16,6 @@ import favouriteRoutes from "./modules/Favourite/favourite.route.js";
 import adminSettingsRoutes from "./modules/admin/settings/admin_settigns.route.js";
 import supportRoutes from "./modules/helpSupport/support.route.js";
 import socialClubRoutes from "./modules/social_club/social_club.route.js";
-//Import Swagger spec and UI
 import { swaggerSpec } from "./swagger/index.js";
 import swaggerUi from "swagger-ui-express";
 import { sendEmail } from "./utils/mailService.js";
