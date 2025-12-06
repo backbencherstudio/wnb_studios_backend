@@ -18,12 +18,12 @@ const buildS3Url = (bucket, key) => {
   const region = process.env.AWS_REGION || "us-east-1";
   return `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
 };
-// Helper function to build local file URL
 const buildLocalUrl = (file) => {
   const PUBLIC_BASE_URL =
     process.env.PUBLIC_BASE_URL || "http://localhost:4005";
   return file ? `${PUBLIC_BASE_URL}/uploads/${file}` : null;
 };
+
 // Route to get all contents
 r.get("/allContents", verifyUser("admin"), async (req, res) => {
   try {
@@ -78,7 +78,6 @@ r.get("/allContents", verifyUser("admin"), async (req, res) => {
     res.status(500).json({ error: "Failed to fetch contents" });
   }
 });
-
 r.get("/:id", verifyUser("admin"), async (req, res) => {
   const { id } = req.params;
   try {
@@ -130,7 +129,6 @@ r.get("/:id", verifyUser("admin"), async (req, res) => {
     res.status(500).json({ error: "Failed to fetch content" });
   }
 });
-
 r.get("/getoneWithcat/:id", async (req, res) => {
   const { id } = req.params;
 

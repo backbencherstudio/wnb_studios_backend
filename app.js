@@ -6,7 +6,7 @@ import path from "path";
 import userRoutes from "./modules/user/user.route.js";
 import nodeCron from "node-cron";
 import { PrismaClient } from "@prisma/client";
-import uploadsRoutes from "./modules/admin/video_routes/uploads.route.js";
+import uploadsRoutes from "./modules/admin/video_routes/video.route.js";
 import pay from "./modules/paymnet/stripe.route.js";
 import createRoutes from "./modules/admin/create-category/create_category.route.js";
 import usermanagementRoutes from "./modules/admin/users/users.route.js";

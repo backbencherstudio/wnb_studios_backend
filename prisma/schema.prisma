@@ -109,6 +109,7 @@ model User {
   reelComments             ReelComment[]
   reels                    Reels[]                   @relation("ReelLikes")
   reelss                   Reels[]
+  reelCommentss            ReelComment[]             @relation("ReelCommentLikes")
 
   @@map("users")
 }
@@ -1016,10 +1017,13 @@ model ReelComment {
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  replies      ReelComment[] @relation("ReelCommentReplies")
-  parentId     String?
-  reelComments ReelComment[] @relation("ReelCommentReplies")
+  likes User[] @relation("ReelCommentLikes")
+
+  parentId String?
+  parent   ReelComment?  @relation("ReelCommentReplies", fields: [parentId], references: [id])
+  replies  ReelComment[] @relation("ReelCommentReplies")
 
   @@index([reelId])
   @@index([userId])
+  @@index([parentId])
 }
