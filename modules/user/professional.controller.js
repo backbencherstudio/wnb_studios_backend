@@ -72,16 +72,12 @@ export const submitProfessionalVerification = async (req, res) => {
       businessUrl = businessUpload.Location || businessUpload.url;
     } catch (uploadError) {
       console.error("S3 Upload Error:", uploadError);
-      return res
-        .status(500)
-        .json({
-          message: "Failed to upload documents",
-          error: uploadError.message,
-        });
+      return res.status(500).json({
+        message: "Failed to upload documents",
+        error: uploadError.message,
+      });
     }
 
-    // Create or Update Verification Record
-    // Using upsert to handle re-submissions
     const verification = await prisma.professionalVerification.upsert({
       where: { user_id: userId },
       update: {
@@ -97,7 +93,7 @@ export const submitProfessionalVerification = async (req, res) => {
         business_name,
         business_registration_url: businessUrl,
         tax_id,
-        status: "PENDING", // Reset status to PENDING on re-submission
+        status: "PENDING",
       },
       create: {
         user_id: userId,
@@ -117,10 +113,6 @@ export const submitProfessionalVerification = async (req, res) => {
       },
     });
 
-    // Update User Type to Professional (as per requirement: "If the user fully update this proffessional details then the user type will be change to proffesional")
-    // We also set the verification status to APPROVED if we are auto-approving, or keep it PENDING if we want admin review.
-    // The prompt implies immediate change.
-
     await prisma.user.update({
       where: { id: userId },
       data: {
@@ -129,10 +121,10 @@ export const submitProfessionalVerification = async (req, res) => {
     });
 
     // Optionally update verification status to APPROVED if auto-approving
-    // await prisma.professionalVerification.update({
-    //   where: { id: verification.id },
-    //   data: { status: "APPROVED" }
-    // });
+    await prisma.professionalVerification.update({
+      where: { id: verification.id },
+      data: { status: "APPROVED" },
+    });
 
     return res.status(200).json({
       success: true,

@@ -197,8 +197,7 @@ export const postMessage = async (req, res) => {
 
     const room = await ensureRoomForClub(clubId);
 
-    // Create message with nested attachments in one DB call (atomic)
-    // If attachments were uploaded via multipart/s3 helper, attachments may be provided in req.files
+
     let attachmentsToCreate = attachments;
     if (
       (!attachments || attachments.length === 0) &&
